@@ -1,0 +1,16 @@
+{
+  "server": {
+    "running": "TalkChat Server is up and running.",
+    "health_ok": "Server is healthy."
+  },
+  "errors": {
+    "internal_server_error": "Internal server error occurred.",
+    "bad_request": "Invalid request provided.",
+    "unauthorized": "Unauthorized. Please authenticate.",
+    "forbidden": "You do not have permission to perform this action.",
+    "not_found": "Resource not found.",
+    "route_not_found": "Requested route does not exist.",
+    "validation_error": "Validation failed for request parameters.",
+    "too_many_requests": "Too many requests. Please try again later."
+  }
+}
