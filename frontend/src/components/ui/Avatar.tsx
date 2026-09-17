@@ -58,6 +58,7 @@ export interface AvatarProps
   src?: string | null;
   alt?: string;
   name?: string;
+  icon?: React.ReactNode;
   isOnline?: boolean;
   status?: 'online' | 'offline' | 'busy' | 'away';
   hasStory?: boolean;
@@ -67,7 +68,7 @@ export interface AvatarProps
 /**
  * Reusable Avatar Component.
  * 
- * Displays user profile picture with graceful fallback to two-letter initials.
+ * Displays user profile picture with graceful fallback to two-letter initials or custom icon.
  * Supports online presence status indicators and ephemeral story rings.
  * 
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/img
@@ -76,6 +77,7 @@ export function Avatar({
   src,
   alt,
   name = 'User',
+  icon,
   size = 'md',
   isOnline,
   status,
@@ -126,6 +128,10 @@ export function Avatar({
               onError={() => setImageError(true)}
               className="w-full h-full object-cover"
             />
+          ) : icon ? (
+            <span className="flex items-center justify-center text-txt-secondary">
+              {icon}
+            </span>
           ) : (
             <span className="font-semibold tracking-wider text-txt-primary">
               {initials}
