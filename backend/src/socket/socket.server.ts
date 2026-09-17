@@ -7,6 +7,7 @@ import { logger } from '../utils/logger.js';
 import { socketAuthMiddleware } from './socket.auth.js';
 import { presenceTracker } from './socket.presence.js';
 import { registerChatHandlers } from './handlers/chat.handler.js';
+import { registerCallHandlers } from './handlers/call.handler.js';
 import { SocketEvents } from '../constants/socketEvents.js';
 
 let ioInstance: Server | null = null;
@@ -63,6 +64,7 @@ export const initSocketServer = (httpServer: HttpServer): Server => {
 
     // Register modular domain event listeners immediately to prevent packet drop
     registerChatHandlers(io, socket);
+    registerCallHandlers(io, socket);
 
     // Automatically bind socket to user's private notification channel
     socket.join(`user:${userId}`);

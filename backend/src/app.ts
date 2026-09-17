@@ -11,6 +11,7 @@ import userRouter from './modules/user/user.routes.js';
 import chatRouter from './modules/chat/chat.routes.js';
 import messageRouter from './modules/message/message.routes.js';
 import e2eeRouter from './modules/e2ee/e2ee.routes.js';
+import callRouter from './modules/call/call.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -64,6 +65,10 @@ export const createApp = (): Express => {
   // End-to-End Encryption (E2EE) Key Exchange & Safety Numbers
   // @see https://signal.org/docs/specifications/x3dh/
   app.use(`${env.API_PREFIX}/e2ee`, e2eeRouter);
+
+  // WebRTC 1-to-1 Audio & Video Call Management Routes
+  // @see https://webrtc.org/
+  app.use(`${env.API_PREFIX}/calls`, callRouter);
 
   // 404 Handler for undefined routes
   app.use((_req: Request, _res: Response, next) => {

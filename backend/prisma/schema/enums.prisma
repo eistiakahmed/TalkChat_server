@@ -36,3 +36,19 @@ enum DeviceType {
   IOS
   WEB
 }
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  ACCEPTED
+  REJECTED
+  MISSED
+  BUSY
+  ENDED
+}
+

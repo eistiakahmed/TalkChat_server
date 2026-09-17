@@ -31,6 +31,9 @@ model User {
 
   keyBundles UserKeyBundle[]
 
+  callsMade     CallLog[] @relation("CallsMade")
+  callsReceived CallLog[] @relation("CallsReceived")
+
   @@index([username])
   @@index([email])
   @@index([isOnline])

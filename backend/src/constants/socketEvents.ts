@@ -34,6 +34,20 @@ export const SocketEvents = {
   MESSAGE_REACTION: 'message:reaction',
   MESSAGE_RECEIPT: 'message:receipt',
 
+  // WebRTC 1-to-1 Audio & Video Call Signaling
+  CALL_INITIATE: 'call:initiate',
+  CALL_INCOMING: 'call:incoming',
+  CALL_RINGING: 'call:ringing',
+  CALL_ACCEPT: 'call:accept',
+  CALL_ACCEPTED: 'call:accepted',
+  CALL_REJECT: 'call:reject',
+  CALL_REJECTED: 'call:rejected',
+  CALL_ICE_CANDIDATE: 'call:ice-candidate',
+  CALL_END: 'call:end',
+  CALL_ENDED: 'call:ended',
+  CALL_BUSY: 'call:busy',
+  CALL_MISSED: 'call:missed',
+
   // Error Handling
   ERROR: 'error',
 } as const;
