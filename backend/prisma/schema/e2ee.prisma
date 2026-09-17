@@ -1,0 +1,34 @@
+model UserKeyBundle {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @db.Uuid
+  deviceId              Int      @default(1)
+  registrationId        Int
+  identityKey           String   @db.Text
+  signedPreKeyId        Int
+  signedPreKey          String   @db.Text
+  signedPreKeySignature String   @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  oneTimePreKeys OneTimePreKey[]
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+  @@map("user_key_bundles")
+}
+
+model OneTimePreKey {
+  id         String    @id @default(uuid()) @db.Uuid
+  bundleId   String    @db.Uuid
+  keyId      Int
+  publicKey  String    @db.Text
+  isConsumed Boolean   @default(false)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  bundle UserKeyBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@index([bundleId, isConsumed])
+  @@map("one_time_pre_keys")
+}

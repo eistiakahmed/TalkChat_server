@@ -29,6 +29,8 @@ model User {
   blockedUsers   BlockedUser[] @relation("UserBlocker")
   blockedByUsers BlockedUser[] @relation("UserBlocked")
 
+  keyBundles UserKeyBundle[]
+
   @@index([username])
   @@index([email])
   @@index([isOnline])

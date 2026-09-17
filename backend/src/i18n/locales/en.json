@@ -71,5 +71,14 @@
     "cannot_delete_others": "You do not have permission to delete this message for everyone.",
     "empty_content": "Message content or an attachment is required.",
     "reply_not_found": "Parent message for reply was not found."
+  },
+  "e2ee": {
+    "keys_uploaded": "E2EE cryptographic key bundle uploaded successfully.",
+    "keys_refilled": "One-time prekeys refilled successfully.",
+    "bundle_fetched": "Recipient prekey bundle retrieved successfully.",
+    "count_fetched": "Prekey count retrieved successfully.",
+    "safety_number_generated": "Safety number computed successfully.",
+    "keys_not_found": "No cryptographic key bundle found for this user.",
+    "cannot_safety_self": "Cannot generate safety numbers with yourself."
   }
 }

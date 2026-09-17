@@ -10,6 +10,7 @@ import authRouter from './modules/auth/auth.routes.js';
 import userRouter from './modules/user/user.routes.js';
 import chatRouter from './modules/chat/chat.routes.js';
 import messageRouter from './modules/message/message.routes.js';
+import e2eeRouter from './modules/e2ee/e2ee.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -59,6 +60,10 @@ export const createApp = (): Express => {
   // Message & Chat History Routes
   // @see https://expressjs.com/en/guide/routing.html
   app.use(`${env.API_PREFIX}/messages`, messageRouter);
+
+  // End-to-End Encryption (E2EE) Key Exchange & Safety Numbers
+  // @see https://signal.org/docs/specifications/x3dh/
+  app.use(`${env.API_PREFIX}/e2ee`, e2eeRouter);
 
   // 404 Handler for undefined routes
   app.use((_req: Request, _res: Response, next) => {
