@@ -14,6 +14,19 @@ import {
   ReactMessageInput,
   UpdateReceiptInput,
 } from './message.validation.js';
+import { getIO } from '../../socket/socket.server.js';
+import { SocketEvents } from '../../constants/socketEvents.js';
+
+/**
+ * Safely emit WebSocket events to a conversation room if socket server is active.
+ */
+const emitToConversation = (conversationId: string, event: string, payload: unknown): void => {
+  try {
+    getIO().to(`conversation:${conversationId}`).emit(event, payload);
+  } catch {
+    // Gracefully handle situations where socket server is uninitialized (e.g. CLI/tests)
+  }
+};
 
 /**
  * Message and Real-time Chat History Service.
@@ -119,7 +132,7 @@ export class MessageService {
     }
 
     // Execute atomic transaction for message persistence, conversation update, and unread counters
-    return prisma.$transaction(async (tx) => {
+    const createdMessage = await prisma.$transaction(async (tx) => {
       const message = await tx.message.create({
         data: {
           conversationId: input.conversationId,
@@ -190,6 +203,11 @@ export class MessageService {
 
       return message;
     });
+
+    // Broadcast real-time message event to conversation room
+    emitToConversation(input.conversationId, SocketEvents.MESSAGE_NEW, { message: createdMessage });
+
+    return createdMessage;
   }
 
   /**
@@ -366,6 +384,8 @@ export class MessageService {
       },
     });
 
+    emitToConversation(message.conversationId, SocketEvents.MESSAGE_EDITED, { message: updated });
+
     return updated;
   }
 
@@ -439,6 +459,12 @@ export class MessageService {
       },
     });
 
+    emitToConversation(message.conversationId, SocketEvents.MESSAGE_DELETED, {
+      messageId: input.messageId,
+      conversationId: message.conversationId,
+      deleteType: 'FOR_EVERYONE',
+    });
+
     return { messageId: input.messageId, deleteType: 'FOR_EVERYONE' };
   }
 
@@ -490,6 +516,15 @@ export class MessageService {
       await prisma.messageReaction.delete({
         where: { id: existing.id },
       });
+
+      emitToConversation(message.conversationId, SocketEvents.MESSAGE_REACTION, {
+        messageId: input.messageId,
+        conversationId: message.conversationId,
+        emoji: input.emoji,
+        userId,
+        reacted: false,
+      });
+
       return { messageId: input.messageId, emoji: input.emoji, reacted: false };
     }
 
@@ -499,6 +534,14 @@ export class MessageService {
         userId,
         emoji: input.emoji,
       },
+    });
+
+    emitToConversation(message.conversationId, SocketEvents.MESSAGE_REACTION, {
+      messageId: input.messageId,
+      conversationId: message.conversationId,
+      emoji: created.emoji,
+      userId,
+      reacted: true,
     });
 
     return { messageId: input.messageId, emoji: created.emoji, reacted: true };
@@ -564,6 +607,13 @@ export class MessageService {
           },
         });
       }
+    });
+
+    emitToConversation(input.conversationId, SocketEvents.MESSAGE_RECEIPT, {
+      conversationId: input.conversationId,
+      userId,
+      status: input.status,
+      messageIds: input.messageIds,
     });
 
     return {
