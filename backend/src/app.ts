@@ -6,6 +6,7 @@ import { i18nMiddleware, t } from './i18n/i18n.middleware.js';
 import { errorHandler } from './errors/errorHandler.js';
 import { NotFoundError } from './errors/AppError.js';
 import { HttpStatus } from './constants/httpStatusCodes.js';
+import authRouter from './modules/auth/auth.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -39,6 +40,10 @@ export const createApp = (): Express => {
   app.get('/health', healthCheck);
   app.get('/api/health', healthCheck);
   app.get(`${env.API_PREFIX}/health`, healthCheck);
+
+  // Authentication Module Routes
+  // @see https://expressjs.com/en/guide/routing.html
+  app.use(`${env.API_PREFIX}/auth`, authRouter);
 
   // 404 Handler for undefined routes
   app.use((_req: Request, _res: Response, next) => {

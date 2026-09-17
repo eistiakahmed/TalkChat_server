@@ -12,5 +12,16 @@
     "route_not_found": "Requested route does not exist.",
     "validation_error": "Validation failed for request parameters.",
     "too_many_requests": "Too many requests. Please try again later."
+  },
+  "auth": {
+    "registered_successfully": "Account registered successfully.",
+    "logged_in_successfully": "Logged in successfully.",
+    "token_refreshed": "Token refreshed successfully.",
+    "logged_out_successfully": "Logged out successfully.",
+    "invalid_credentials": "Invalid email/username or password.",
+    "email_exists": "An account with this email address already exists.",
+    "username_exists": "An account with this username already exists.",
+    "token_expired": "Your session token has expired. Please refresh or login again.",
+    "token_invalid": "Invalid authentication token."
   }
 }
