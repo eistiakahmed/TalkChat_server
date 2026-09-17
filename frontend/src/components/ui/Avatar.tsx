@@ -1,0 +1,146 @@
+'use client';
+
+import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../../utils/cn';
+
+/**
+ * Avatar size variants using CVA.
+ */
+const avatarVariants = cva(
+  'relative inline-flex items-center justify-center shrink-0 rounded-full select-none overflow-hidden font-semibold uppercase transition-transform',
+  {
+    variants: {
+      size: {
+        xs: 'w-6 h-6 text-[10px]',
+        sm: 'w-8 h-8 text-xs',
+        md: 'w-10 h-10 text-sm',
+        lg: 'w-12 h-12 text-base',
+        xl: 'w-16 h-16 text-lg',
+        '2xl': 'w-24 h-24 text-2xl',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }
+);
+
+const statusBadgeVariants = cva(
+  'absolute bottom-0 right-0 rounded-full border-2 border-surface',
+  {
+    variants: {
+      size: {
+        xs: 'w-1.5 h-1.5',
+        sm: 'w-2.5 h-2.5',
+        md: 'w-3 h-3',
+        lg: 'w-3.5 h-3.5',
+        xl: 'w-4 h-4',
+        '2xl': 'w-6 h-6',
+      },
+      status: {
+        online: 'bg-success',
+        offline: 'bg-txt-muted',
+        busy: 'bg-danger',
+        away: 'bg-warning',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+      status: 'offline',
+    },
+  }
+);
+
+export interface AvatarProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof avatarVariants> {
+  src?: string | null;
+  alt?: string;
+  name?: string;
+  isOnline?: boolean;
+  status?: 'online' | 'offline' | 'busy' | 'away';
+  hasStory?: boolean;
+  storyViewed?: boolean;
+}
+
+/**
+ * Reusable Avatar Component.
+ * 
+ * Displays user profile picture with graceful fallback to two-letter initials.
+ * Supports online presence status indicators and ephemeral story rings.
+ * 
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/img
+ */
+export function Avatar({
+  src,
+  alt,
+  name = 'User',
+  size = 'md',
+  isOnline,
+  status,
+  hasStory = false,
+  storyViewed = false,
+  className,
+  ...props
+}: AvatarProps) {
+  const [imageError, setImageError] = React.useState(false);
+
+  // Compute initials: "Alice Walker" -> "AW"
+  const initials = React.useMemo(() => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return (name.slice(0, 2) || 'U').toUpperCase();
+  }, [name]);
+
+  // Derive status
+  const currentStatus = status || (isOnline ? 'online' : undefined);
+
+  return (
+    <div className="relative inline-block shrink-0">
+      {/* Optional Story Ring Wrapper */}
+      <div
+        className={cn(
+          'p-0.5 rounded-full transition-all',
+          hasStory &&
+            !storyViewed &&
+            'bg-gradient-to-tr from-accent via-cyan-400 to-blue-500 shadow-xs',
+          hasStory && storyViewed && 'bg-border-strong'
+        )}
+      >
+        <div
+          className={cn(
+            avatarVariants({ size }),
+            'bg-card border border-border-subtle text-txt-secondary',
+            hasStory && 'border-2 border-surface',
+            className
+          )}
+          {...props}
+        >
+          {src && !imageError ? (
+            <img
+              src={src}
+              alt={alt || name}
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="font-semibold tracking-wider text-txt-primary">
+              {initials}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Online Status Dot Indicator */}
+      {currentStatus && (
+        <span
+          className={cn(statusBadgeVariants({ size, status: currentStatus }))}
+          aria-label={`Status: ${currentStatus}`}
+        />
+      )}
+    </div>
+  );
+}
