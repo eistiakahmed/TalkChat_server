@@ -46,43 +46,25 @@ function cleanupConnection() {
 }
 
 /**
- * Custom React Hook for WebRTC 1-to-1 Audio/Video Call Signaling.
- * 
- * Orchestrates RTCPeerConnection lifecycle, getUserMedia acquisition,
- * Trickle ICE candidate relay, and session state transitions.
- * 
- * @see https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API
+ * Hook for WebRTC Socket Signaling.
+ * Mount ONCE globally in CallOverlay to handle all incoming/accepted/rejected/ice events.
  */
-export function useWebRTC() {
+export function useWebRTCSignaling() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const sessionState = useCallStore((s) => s.sessionState);
 
-  const {
-    sessionState,
-    callId,
-    peerUser,
-    callType,
-    incomingOffer,
-    setIncomingCall,
-    setOutgoingCall,
-    setConnecting,
-    setConnected,
-    setLocalStream,
-    setRemoteStream,
-    incrementDuration,
-  } = useCallStore();
-
-  // Active call duration timer
+  // Active call duration timer (runs only in CallOverlay)
   React.useEffect(() => {
     if (sessionState !== 'CONNECTED') return;
 
     const interval = setInterval(() => {
-      incrementDuration();
+      useCallStore.getState().incrementDuration();
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [sessionState, incrementDuration]);
+  }, [sessionState]);
 
-  // Bind Socket Signaling Listeners
+  // Bind Socket Signaling Listeners (once per application session)
   React.useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -96,7 +78,7 @@ export function useWebRTC() {
       offerSdp: RTCSessionDescriptionInit;
       conversationId?: string;
     }) => {
-      setIncomingCall(payload);
+      useCallStore.getState().setIncomingCall(payload);
     };
 
     // 2. Callee Accepted Event (Received by Caller)
@@ -116,7 +98,7 @@ export function useWebRTC() {
               await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
             }
           }
-          setConnected();
+          useCallStore.getState().setConnected();
         } catch (err) {
           console.error('[WebRTC] Error applying remote answer:', err);
         }
@@ -163,7 +145,22 @@ export function useWebRTC() {
       socket.off('call:rejected', onCallRejected);
       socket.off('call:missed', onCallMissed);
     };
-  }, [isAuthenticated, setIncomingCall, setConnected]);
+  }, [isAuthenticated]);
+}
+
+/**
+ * Custom React Hook for WebRTC 1-to-1 Audio/Video Call Actions.
+ * 
+ * Provides stable callable triggers (startCall, acceptCall, rejectCall, endCall).
+ * 
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API
+ */
+export function useWebRTC() {
+  const sessionState = useCallStore((s) => s.sessionState);
+  const callId = useCallStore((s) => s.callId);
+  const peerUser = useCallStore((s) => s.peerUser);
+  const callType = useCallStore((s) => s.callType);
+  const incomingOffer = useCallStore((s) => s.incomingOffer);
 
   // Initiate Outgoing Call
   const startCall = React.useCallback(
@@ -173,7 +170,7 @@ export function useWebRTC() {
       conversationId?: string
     ) => {
       try {
-        setConnecting();
+        useCallStore.getState().setConnecting();
 
         // 1. Acquire local camera / microphone stream
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -181,7 +178,7 @@ export function useWebRTC() {
           video: type === 'VIDEO',
         });
         localMediaStream = stream;
-        setLocalStream(stream);
+        useCallStore.getState().setLocalStream(stream);
 
         // 2. Initialize RTCPeerConnection
         const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -193,7 +190,7 @@ export function useWebRTC() {
         // Listen for remote audio/video tracks
         pc.ontrack = (event) => {
           if (event.streams && event.streams[0]) {
-            setRemoteStream(event.streams[0]);
+            useCallStore.getState().setRemoteStream(event.streams[0]);
           }
         };
 
@@ -225,7 +222,7 @@ export function useWebRTC() {
           },
           (res?: { callId: string }) => {
             if (res?.callId) {
-              setOutgoingCall({
+              useCallStore.getState().setOutgoingCall({
                 callId: res.callId,
                 recipient,
                 type,
@@ -235,7 +232,7 @@ export function useWebRTC() {
           }
         );
 
-        setOutgoingCall({
+        useCallStore.getState().setOutgoingCall({
           callId: 'pending',
           recipient,
           type,
@@ -246,23 +243,28 @@ export function useWebRTC() {
         cleanupConnection();
       }
     },
-    [setConnecting, setLocalStream, setRemoteStream, setOutgoingCall]
+    []
   );
 
   // Accept Incoming Call
   const acceptCall = React.useCallback(async () => {
-    if (!callId || !incomingOffer || !peerUser) return;
+    const currentCallId = useCallStore.getState().callId;
+    const currentOffer = useCallStore.getState().incomingOffer;
+    const currentPeer = useCallStore.getState().peerUser;
+    const currentType = useCallStore.getState().callType;
+
+    if (!currentCallId || !currentOffer || !currentPeer) return;
 
     try {
-      setConnecting();
+      useCallStore.getState().setConnecting();
 
       // 1. Acquire local media stream
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: callType === 'VIDEO',
+        video: currentType === 'VIDEO',
       });
       localMediaStream = stream;
-      setLocalStream(stream);
+      useCallStore.getState().setLocalStream(stream);
 
       // 2. Initialize RTCPeerConnection
       const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -272,23 +274,23 @@ export function useWebRTC() {
 
       pc.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
-          setRemoteStream(event.streams[0]);
+          useCallStore.getState().setRemoteStream(event.streams[0]);
         }
       };
 
       pc.onicecandidate = (event) => {
-        if (event.candidate && peerUser.id) {
+        if (event.candidate && currentPeer.id) {
           const socket = socketClient.getSocket();
           socket?.emit('call:ice-candidate', {
-            callId,
-            targetUserId: peerUser.id,
+            callId: currentCallId,
+            targetUserId: currentPeer.id,
             candidate: event.candidate,
           });
         }
       };
 
       // 3. Apply Remote SDP Offer & Create SDP Answer
-      await pc.setRemoteDescription(new RTCSessionDescription(incomingOffer));
+      await pc.setRemoteDescription(new RTCSessionDescription(currentOffer));
 
       // Flush any queued candidates
       while (iceCandidateQueue.length > 0) {
@@ -304,52 +306,46 @@ export function useWebRTC() {
       // 4. Emit Call Accepted event with SDP Answer
       const socket = socketClient.getSocket();
       socket?.emit('call:accept', {
-        callId,
+        callId: currentCallId,
         answerSdp: answer,
       });
 
-      setConnected();
+      useCallStore.getState().setConnected();
     } catch (err) {
       console.error('[WebRTC] Failed to accept call:', err);
       cleanupConnection();
     }
-  }, [
-    callId,
-    incomingOffer,
-    peerUser,
-    callType,
-    setConnecting,
-    setLocalStream,
-    setRemoteStream,
-    setConnected,
-  ]);
+  }, []);
 
   // Reject Incoming Call
   const rejectCall = React.useCallback(
     (reason: 'DECLINED' | 'BUSY' = 'DECLINED') => {
-      if (callId) {
+      const currentCallId = useCallStore.getState().callId;
+      if (currentCallId) {
         const socket = socketClient.getSocket();
-        socket?.emit('call:reject', { callId, reason });
+        socket?.emit('call:reject', { callId: currentCallId, reason });
       }
       cleanupConnection();
     },
-    [callId]
+    []
   );
 
   // Terminate Active Call
   const endCall = React.useCallback(() => {
-    if (callId) {
+    const currentCallId = useCallStore.getState().callId;
+    if (currentCallId) {
       const socket = socketClient.getSocket();
-      socket?.emit('call:end', { callId });
+      socket?.emit('call:end', { callId: currentCallId });
     }
     cleanupConnection();
-  }, [callId]);
+  }, []);
 
   return {
     sessionState,
     callId,
     peerUser,
     callType,
+    incomingOffer,
     startCall,
     acceptCall,
     rejectCall,

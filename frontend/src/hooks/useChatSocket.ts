@@ -23,21 +23,13 @@ export function useChatSocket(activeConversationId?: string | null) {
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const {
-    setConnected,
-    addTypingUser,
-    removeTypingUser,
-    setUserOnline,
-    setUserOffline,
-  } = useSocketStore();
-
   React.useEffect(() => {
     if (!isAuthenticated) return;
 
     const socket = socketClient.connect();
 
-    const onConnect = () => setConnected(true);
-    const onDisconnect = () => setConnected(false);
+    const onConnect = () => useSocketStore.getState().setConnected(true);
+    const onDisconnect = () => useSocketStore.getState().setConnected(false);
 
     // Message Lifecycle Events
     const onNewMessage = (payload: { message: Message }) => {
@@ -175,7 +167,7 @@ export function useChatSocket(activeConversationId?: string | null) {
       username: string;
     }) => {
       if (payload.userId !== currentUserId) {
-        addTypingUser(payload.conversationId, {
+        useSocketStore.getState().addTypingUser(payload.conversationId, {
           userId: payload.userId,
           username: payload.username,
         });
@@ -186,16 +178,16 @@ export function useChatSocket(activeConversationId?: string | null) {
       conversationId: string;
       userId: string;
     }) => {
-      removeTypingUser(payload.conversationId, payload.userId);
+      useSocketStore.getState().removeTypingUser(payload.conversationId, payload.userId);
     };
 
     const onUserOnline = (payload: { userId: string }) => {
-      setUserOnline(payload.userId);
+      useSocketStore.getState().setUserOnline(payload.userId);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     };
 
     const onUserOffline = (payload: { userId: string }) => {
-      setUserOffline(payload.userId);
+      useSocketStore.getState().setUserOffline(payload.userId);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     };
 
@@ -224,17 +216,7 @@ export function useChatSocket(activeConversationId?: string | null) {
       socket.off('presence:online', onUserOnline);
       socket.off('presence:offline', onUserOffline);
     };
-  }, [
-    isAuthenticated,
-    activeConversationId,
-    currentUserId,
-    queryClient,
-    setConnected,
-    addTypingUser,
-    removeTypingUser,
-    setUserOnline,
-    setUserOffline,
-  ]);
+  }, [isAuthenticated, activeConversationId, currentUserId, queryClient]);
 
   // Join / leave active conversation room
   React.useEffect(() => {

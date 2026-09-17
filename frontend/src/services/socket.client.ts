@@ -14,15 +14,12 @@ class SocketClient {
    * Connect or retrieve existing Socket.io connection.
    */
   connect(): Socket {
-    const accessToken = useAuthStore.getState().accessToken;
-
-    if (this.socket && this.socket.connected) {
+    // Return existing socket instance if already initialized (whether connecting or connected)
+    if (this.socket) {
       return this.socket;
     }
 
-    if (this.socket) {
-      this.socket.disconnect();
-    }
+    const accessToken = useAuthStore.getState().accessToken;
 
     this.socket = io(SOCKET_URL, {
       auth: {

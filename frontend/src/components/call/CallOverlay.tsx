@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useWebRTC } from '../../hooks/useWebRTC';
+import { useWebRTCSignaling } from '../../hooks/useWebRTC';
 import { IncomingCallModal } from './IncomingCallModal';
 import { ActiveCallModal } from './ActiveCallModal';
 
@@ -15,7 +15,7 @@ import { ActiveCallModal } from './ActiveCallModal';
  */
 export function CallOverlay() {
   // Activate WebRTC signaling listeners (incoming, accepted, ice-candidates, end)
-  useWebRTC();
+  useWebRTCSignaling();
 
   return (
     <>

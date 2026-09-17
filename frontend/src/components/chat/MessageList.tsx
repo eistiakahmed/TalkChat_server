@@ -5,9 +5,11 @@ import { format, isToday, isYesterday } from 'date-fns';
 import type { Message } from '../../types/message.types';
 import { MessageBubble } from './MessageBubble';
 import { useAuthStore } from '../../stores/auth.store';
-import { useSocketStore } from '../../stores/socket.store';
+import { useSocketStore, type TypingUser } from '../../stores/socket.store';
 import { Spinner } from '../ui';
 import { Shield } from 'lucide-react';
+
+const EMPTY_TYPING_USERS: TypingUser[] = [];
 
 export interface MessageListProps {
   conversationId: string;
@@ -51,9 +53,8 @@ export function MessageList({
   onDelete,
 }: MessageListProps) {
   const currentUserId = useAuthStore((s) => s.user?.id);
-  const typingUsers = useSocketStore(
-    (s) => s.typingUsers[conversationId] || []
-  );
+  const rawTyping = useSocketStore((s) => s.typingUsers[conversationId]);
+  const typingUsers = rawTyping || EMPTY_TYPING_USERS;
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);

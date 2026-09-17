@@ -28,6 +28,8 @@ import {
 
 import { soundUtil } from '../../../../utils/sound.util';
 
+const EMPTY_MESSAGES: Message[] = [];
+
 /**
  * Active Conversation Thread Page.
  * 
@@ -67,7 +69,7 @@ export default function ActiveChatPage() {
 
   // 2. Fetch messages history
   const {
-    data: messages = [],
+    data: messagesData,
     isLoading: isLoadingMessages,
   } = useQuery({
     queryKey: ['messages', conversationId],
@@ -82,8 +84,10 @@ export default function ActiveChatPage() {
     enabled: !!conversationId,
   });
 
+  const messages = messagesData || EMPTY_MESSAGES;
+
   React.useEffect(() => {
-    if (conversation) {
+    if (conversation && useChatStore.getState().activeConversationId !== conversation.id) {
       setActiveConversation(conversation);
     }
   }, [conversation, setActiveConversation]);
@@ -156,6 +160,74 @@ export default function ActiveChatPage() {
     },
   });
 
+  const isGroup = conversation?.type === 'GROUP';
+  const otherMember = conversation?.members?.find(
+    (m: ConversationMember) => m.userId !== currentUserId
+  );
+
+  const title = isGroup
+    ? conversation?.title || 'Group Chat'
+    : otherMember?.user.fullName || otherMember?.user.username || 'Direct Message';
+
+  const avatarUrl = isGroup
+    ? conversation?.avatarUrl
+    : otherMember?.user.avatarUrl;
+
+  const isOnline = !isGroup && (otherMember?.user.isOnline ?? false);
+  const subtitle = isGroup
+    ? `${conversation?.members?.length || 0} participants`
+    : isOnline
+    ? 'Online'
+    : otherMember?.user.lastSeen
+    ? 'Recently active'
+    : 'Offline';
+
+  const chatMenuItems = React.useMemo(
+    () => [
+      {
+        id: 'details',
+        label: isGroup ? 'Group Information' : 'Contact Details',
+        onClick: () => setIsInfoOpen(true),
+      },
+      {
+        id: 'disappearing',
+        label: 'Disappearing Messages',
+        icon: <Clock className="w-4 h-4" />,
+        onClick: () => setIsDisappearingOpen(true),
+      },
+      ...(!isGroup && otherMember?.user
+        ? [
+            {
+              id: 'safetyNumber',
+              label: 'Verify Safety Number',
+              icon: <ShieldCheck className="w-4 h-4" />,
+              onClick: () => setIsSafetyNumberOpen(true),
+            },
+          ]
+        : []),
+      {
+        id: 'mute',
+        label: conversation?.userSettings?.isMuted
+          ? 'Unmute'
+          : 'Mute Notifications',
+        onClick: async () => {
+          const nextMuted = !conversation?.userSettings?.isMuted;
+          await chatService.toggleMute(conversationId, nextMuted);
+          queryClient.invalidateQueries({
+            queryKey: ['conversation', conversationId],
+          });
+        },
+      },
+    ],
+    [
+      isGroup,
+      otherMember?.user,
+      conversation?.userSettings?.isMuted,
+      conversationId,
+      queryClient,
+    ]
+  );
+
   if (isLoadingConv) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center space-y-3 bg-card/20">
@@ -179,61 +251,6 @@ export default function ActiveChatPage() {
       </div>
     );
   }
-
-  const isGroup = conversation.type === 'GROUP';
-  const otherMember = conversation.members?.find(
-    (m: ConversationMember) => m.userId !== currentUserId
-  );
-
-  const title = isGroup
-    ? conversation.title || 'Group Chat'
-    : otherMember?.user.fullName || otherMember?.user.username || 'Direct Message';
-
-  const avatarUrl = isGroup
-    ? conversation.avatarUrl
-    : otherMember?.user.avatarUrl;
-
-  const isOnline = !isGroup && (otherMember?.user.isOnline ?? false);
-  const subtitle = isGroup
-    ? `${conversation.members?.length || 0} participants`
-    : isOnline
-    ? 'Online'
-    : otherMember?.user.lastSeen
-    ? 'Recently active'
-    : 'Offline';
-
-  const chatMenuItems = [
-    {
-      id: 'details',
-      label: isGroup ? 'Group Information' : 'Contact Details',
-      onClick: () => setIsInfoOpen(true),
-    },
-    {
-      id: 'disappearing',
-      label: 'Disappearing Messages',
-      icon: <Clock className="w-4 h-4" />,
-      onClick: () => setIsDisappearingOpen(true),
-    },
-    ...(!isGroup && otherMember?.user
-      ? [
-          {
-            id: 'safetyNumber',
-            label: 'Verify Safety Number',
-            icon: <ShieldCheck className="w-4 h-4" />,
-            onClick: () => setIsSafetyNumberOpen(true),
-          },
-        ]
-      : []),
-    {
-      id: 'mute',
-      label: conversation.userSettings?.isMuted ? 'Unmute' : 'Mute Notifications',
-      onClick: async () => {
-        const nextMuted = !conversation.userSettings?.isMuted;
-        await chatService.toggleMute(conversationId, nextMuted);
-        queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
-      },
-    },
-  ];
 
   return (
     <div className="flex-1 h-full flex flex-col bg-background overflow-hidden select-none">

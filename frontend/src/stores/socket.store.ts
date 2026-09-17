@@ -50,7 +50,10 @@ export const useSocketStore = create<SocketState>((set) => ({
 
   removeTypingUser: (conversationId, userId) => {
     set((state) => {
-      const current = state.typingUsers[conversationId] || [];
+      const current = state.typingUsers[conversationId];
+      if (!current || !current.some((u) => u.userId === userId)) {
+        return state;
+      }
       return {
         typingUsers: {
           ...state.typingUsers,
@@ -70,8 +73,11 @@ export const useSocketStore = create<SocketState>((set) => ({
   },
 
   setUserOffline: (userId) => {
-    set((state) => ({
-      onlineUserIds: state.onlineUserIds.filter((id) => id !== userId),
-    }));
+    set((state) => {
+      if (!state.onlineUserIds.includes(userId)) return state;
+      return {
+        onlineUserIds: state.onlineUserIds.filter((id) => id !== userId),
+      };
+    });
   },
 }));
