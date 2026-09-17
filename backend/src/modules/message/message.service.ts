@@ -16,6 +16,9 @@ import {
 } from './message.validation.js';
 import { getIO } from '../../socket/socket.server.js';
 import { SocketEvents } from '../../constants/socketEvents.js';
+import { dispatchNotification } from '../../queues/producer/notification.queue.js';
+import { dispatchMediaJob } from '../../queues/producer/media.queue.js';
+import { logger } from '../../utils/logger.js';
 
 /**
  * Safely emit WebSocket events to a conversation room if socket server is active.
@@ -206,6 +209,63 @@ export class MessageService {
 
     // Broadcast real-time message event to conversation room
     emitToConversation(input.conversationId, SocketEvents.MESSAGE_NEW, { message: createdMessage });
+
+    // Asynchronously dispatch push notifications to other conversation participants
+    prisma.conversationMember
+      .findMany({
+        where: {
+          conversationId: input.conversationId,
+          userId: { not: senderId },
+          leftAt: null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              isOnline: true,
+            },
+          },
+        },
+      })
+      .then(async (members) => {
+        const sender = await prisma.user.findUnique({
+          where: { id: senderId },
+          select: { fullName: true },
+        });
+
+        for (const member of members) {
+          await dispatchNotification({
+            userId: member.userId,
+            senderId,
+            conversationId: input.conversationId,
+            title: sender?.fullName || 'New Message',
+            body: input.content || (file ? `Sent an attachment (${determinedType})` : 'New message'),
+            data: {
+              messageId: createdMessage.id,
+              conversationId: input.conversationId,
+            },
+          }).catch((err) =>
+            logger.warn({ err, userId: member.userId }, 'Failed to enqueue push notification')
+          );
+        }
+      })
+      .catch((err) => {
+        logger.error({ err }, 'Error querying members for push notification dispatch');
+      });
+
+    // Asynchronously dispatch media thumbnail/optimization job if attachment exists
+    if (uploadedAttachment) {
+      dispatchMediaJob({
+        messageId: createdMessage.id,
+        fileUrl: uploadedAttachment.fileUrl,
+        publicId: uploadedAttachment.publicId,
+        mimeType: uploadedAttachment.mimeType,
+        action: 'PROCESS_THUMBNAIL',
+      }).catch((err) => {
+        logger.warn({ err, messageId: createdMessage.id }, 'Failed to enqueue media job');
+      });
+    }
 
     return createdMessage;
   }

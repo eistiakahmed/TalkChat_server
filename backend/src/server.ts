@@ -5,22 +5,27 @@ import { logger } from './utils/logger.js';
 import { connectDatabase, disconnectDatabase } from './config/database.config.js';
 import { connectRedis, disconnectRedis } from './config/redis.config.js';
 import { initSocketServer } from './socket/socket.server.js';
+import { initWorkers, stopWorkers } from './queues/workers/index.js';
 
 /**
  * TalkChat HTTP & WebSocket Server Entrypoint.
  * 
  * Boots the Express application, mounts distributed Socket.io real-time layer,
- * establishes connections to PostgreSQL (via Prisma) and Redis (via ioredis),
+ * initializes BullMQ background workers, establishes database and cache connections,
  * and registers signal handlers for graceful zero-downtime shutdown.
  * 
  * @see https://nodejs.org/api/http.html#httpcreateserveroptions-requestlistener
  * @see https://socket.io/docs/v4/server-initialization/
+ * @see https://docs.bullmq.io/guide/workers/graceful-shutdown
  */
 
 const startServer = async () => {
   // Connect to persistent storage and cache
   await connectDatabase();
   await connectRedis();
+
+  // Initialize BullMQ background workers for async processing
+  initWorkers();
 
   const app = createApp();
   const httpServer = createServer(app);
@@ -34,6 +39,7 @@ const startServer = async () => {
     );
     logger.info(`Health check available at http://localhost:${env.PORT}/api/health`);
     logger.info(`WebSocket real-time layer active on ws://localhost:${env.PORT}`);
+    logger.info(`BullMQ background workers running (notification, email, media)`);
     logger.info(`Auth endpoints mounted at http://localhost:${env.PORT}${env.API_PREFIX}/auth`);
   });
 
@@ -43,6 +49,7 @@ const startServer = async () => {
     httpServer.close(async () => {
       logger.info('HTTP and WebSocket server closed.');
       io.close();
+      await stopWorkers();
       await disconnectDatabase();
       await disconnectRedis();
       process.exit(0);

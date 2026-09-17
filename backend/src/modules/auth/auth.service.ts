@@ -4,6 +4,8 @@ import { hashPassword, comparePassword } from '../../utils/password.util.js';
 import { generateTokens, verifyRefreshToken, AuthTokens } from '../../utils/token.util.js';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../../errors/AppError.js';
 import { RegisterInput, LoginInput } from './auth.validation.js';
+import { dispatchEmail } from '../../queues/producer/email.queue.js';
+import { logger } from '../../utils/logger.js';
 
 /**
  * Authentication Business Logic Service.
@@ -59,6 +61,19 @@ export class AuthService {
         bio: true,
         createdAt: true,
       },
+    });
+
+    // Enqueue welcome email in background BullMQ queue
+    dispatchEmail({
+      to: user.email,
+      subject: 'Welcome to TalkChat!',
+      template: 'WELCOME',
+      context: {
+        fullName: user.fullName || user.username,
+        username: user.username,
+      },
+    }).catch((err) => {
+      logger.warn({ err, userId: user.id }, 'Failed to enqueue welcome email');
     });
 
     const tokens = generateTokens({
