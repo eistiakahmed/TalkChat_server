@@ -21,6 +21,8 @@ import {
   Clock,
 } from 'lucide-react';
 
+import { soundUtil } from '../../../../utils/sound.util';
+
 /**
  * Active Conversation Thread Page.
  * 
@@ -105,6 +107,7 @@ export default function ActiveChatPage() {
       );
     },
     onSuccess: (newMessage) => {
+      soundUtil.playMessageSent();
       queryClient.setQueryData<Message[]>(
         ['messages', conversationId],
         (old = []) => [...old, newMessage]

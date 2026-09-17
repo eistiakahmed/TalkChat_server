@@ -6,6 +6,8 @@ import { socketClient } from '../services/socket.client';
 import { useAuthStore } from '../stores/auth.store';
 import { useSocketStore } from '../stores/socket.store';
 import { messageService } from '../services/message.service';
+import { soundUtil } from '../utils/sound.util';
+import { notificationService } from '../services/notification.service';
 import type { Message, MessageReaction, MessageReceipt } from '../types/message.types';
 
 /**
@@ -53,6 +55,23 @@ export function useChatSocket(activeConversationId?: string | null) {
 
       // Invalidate and refresh conversation list
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+
+      // Audio and Desktop Notification dispatch
+      if (msg.senderId !== currentUserId) {
+        soundUtil.playMessageReceived();
+
+        if (
+          typeof document !== 'undefined' &&
+          (document.hidden || activeConversationId !== msg.conversationId)
+        ) {
+          const senderTitle =
+            msg.sender?.fullName || msg.sender?.username || 'New Message';
+          notificationService.showNotification(senderTitle, {
+            body: msg.content || 'Sent an attachment',
+            onClickUrl: `/chat/${msg.conversationId}`,
+          });
+        }
+      }
 
       // Automatically send read receipt if actively viewing this chat
       if (

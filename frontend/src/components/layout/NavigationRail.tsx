@@ -13,10 +13,15 @@ import {
   Moon,
   LogOut,
   User as UserIcon,
+  Volume2,
+  VolumeX,
+  Bell,
 } from 'lucide-react';
 import { Avatar, Tooltip, Dropdown } from '../ui';
 import { useThemeStore } from '../../stores/theme.store';
 import { useAuthStore } from '../../stores/auth.store';
+import { useSettingsStore } from '../../stores/settings.store';
+import { notificationService } from '../../services/notification.service';
 import { authService } from '../../services/auth.service';
 import { cn } from '../../utils/cn';
 
@@ -33,6 +38,8 @@ export function NavigationRail() {
   const router = useRouter();
   const { theme, toggleTheme } = useThemeStore();
   const { user, refreshToken, logout } = useAuthStore();
+  const { soundEnabled, toggleSound, desktopNotificationsEnabled } =
+    useSettingsStore();
 
   const handleLogout = async () => {
     try {
@@ -82,6 +89,26 @@ export function NavigationRail() {
       label: user?.fullName || 'Profile',
       icon: <UserIcon className="w-4 h-4" />,
       onClick: () => router.push('/profile'),
+    },
+    {
+      id: 'sound',
+      label: soundEnabled ? 'Mute Sounds' : 'Unmute Sounds',
+      icon: soundEnabled ? (
+        <VolumeX className="w-4 h-4" />
+      ) : (
+        <Volume2 className="w-4 h-4" />
+      ),
+      onClick: toggleSound,
+    },
+    {
+      id: 'notifications',
+      label: desktopNotificationsEnabled
+        ? 'Notifications Active'
+        : 'Enable Notifications',
+      icon: <Bell className="w-4 h-4" />,
+      onClick: async () => {
+        await notificationService.requestPermission();
+      },
     },
     {
       id: 'settings',

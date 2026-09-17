@@ -7,6 +7,7 @@ import { NavigationRail } from '../../components/layout/NavigationRail';
 import { MobileNav } from '../../components/layout/MobileNav';
 import { ConversationSidebar } from '../../components/chat/ConversationSidebar';
 import { Spinner } from '../../components/ui';
+import { usePresence } from '../../hooks/usePresence';
 
 /**
  * Authenticated Application Shell Layout.
@@ -25,6 +26,9 @@ export default function MainAppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isHydrated } = useAuthStore();
+
+  // Activate presence heartbeat and tab visibility syncing
+  usePresence();
 
   const isChatThreadOpen =
     pathname.startsWith('/chat/') && pathname !== '/chat';
