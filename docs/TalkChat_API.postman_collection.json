@@ -30,6 +30,11 @@
       "key": "conversationId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "messageId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -943,6 +948,257 @@
               "raw": "{{baseUrl}}/api/v1/chats/leave",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "chats", "leave"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Messages & Chat History (Phase 6)",
+      "item": [
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.message) {",
+                  "    pm.collectionVariables.set(\"messageId\", jsonData.data.message.id);",
+                  "    console.log(\"Saved messageId:\", jsonData.data.message.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"content\": \"Hello! How is the backend architecture progressing?\",\n  \"type\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Reply Message",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"content\": \"Progressing excellently! Phase 6 messages are fully verified.\",\n  \"parentMessageId\": \"{{messageId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversation Messages (Chat History)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"limit\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Edit Message",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": \"{{messageId}}\",\n  \"content\": \"Hello! How is the backend architecture progressing? (Updated)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/edit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "edit"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Emoji Reaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": \"{{messageId}}\",\n  \"emoji\": \"❤️\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/react",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "react"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Message Receipts (Mark Read)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"messageIds\": [\"{{messageId}}\"],\n  \"status\": \"READ\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/receipt",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "receipt"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Message",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": \"{{messageId}}\",\n  \"deleteType\": \"FOR_EVERYONE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/messages/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "messages", "delete"]
             }
           },
           "response": []

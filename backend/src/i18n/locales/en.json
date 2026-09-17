@@ -57,5 +57,19 @@
     "admin_required": "Administrator or Moderator privileges required to perform this action.",
     "cannot_demote_creator": "The creator of the group cannot be demoted.",
     "cannot_remove_creator": "The creator of the group cannot be removed."
+  },
+  "message": {
+    "sent_successfully": "Message sent successfully.",
+    "history_fetched": "Messages fetched successfully.",
+    "edited_successfully": "Message edited successfully.",
+    "deleted_successfully": "Message deleted successfully.",
+    "reaction_updated": "Reaction updated successfully.",
+    "receipt_updated": "Receipts updated successfully.",
+    "not_found": "Message not found.",
+    "not_member": "You are not an active member of this conversation.",
+    "cannot_edit_others": "You can only edit your own messages.",
+    "cannot_delete_others": "You do not have permission to delete this message for everyone.",
+    "empty_content": "Message content or an attachment is required.",
+    "reply_not_found": "Parent message for reply was not found."
   }
 }
