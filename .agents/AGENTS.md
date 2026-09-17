@@ -65,3 +65,7 @@ Before writing any code or starting a new phase/task, **ALWAYS**:
 5. **Real-time & Background Jobs**:
    - Use Redis adapter for Socket.io to allow horizontal scaling.
    - Offload heavy tasks (notifications, media processing, analytics) to BullMQ workers.
+6. **Comments & Source Links Before Code**:
+   - **Always write clear, explanatory doc-comments before creating or modifying any function, service, controller, middleware, or configuration**.
+   - **Include official documentation/source links** (e.g., Prisma Docs, Express Docs, Redis Docs, Cloudinary Docs, RFCs) in the comments to cite standards, rationale, and best practices.
+

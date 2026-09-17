@@ -6,6 +6,16 @@ import { t } from '../i18n/i18n.middleware.js';
 import { logger } from '../utils/logger.js';
 import { env } from '../config/env.config.js';
 
+/**
+ * Global Express Error Handling Middleware.
+ * 
+ * Intercepts all synchronous and asynchronous errors across controllers and services,
+ * formatting them into standardized JSON error payloads. Supports dynamic localization
+ * based on the client's `Accept-Language` header via the i18n subsystem.
+ * 
+ * @see https://expressjs.com/en/guide/error-handling.html
+ * @see https://zod.dev/?id=error-handling
+ */
 export const errorHandler: ErrorRequestHandler = (
   err: any,
   req: Request,

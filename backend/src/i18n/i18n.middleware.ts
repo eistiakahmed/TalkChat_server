@@ -13,6 +13,9 @@ const locales: Record<SupportedLanguage, Record<string, any>> = {
 
 /**
  * Parses the Accept-Language header and returns the best matching supported language.
+ * Follows HTTP/1.1 content negotiation priority specification.
+ * 
+ * @see https://datatracker.ietf.org/doc/html/rfc9110#section-12.5.4
  */
 export function parseAcceptLanguage(header?: string): SupportedLanguage {
   if (!header) return DEFAULT_LANGUAGE;
