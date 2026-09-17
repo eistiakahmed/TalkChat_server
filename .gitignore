@@ -22,3 +22,8 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Local agent & documentation files
+.agents/
+docs/
+AGENTS.md
