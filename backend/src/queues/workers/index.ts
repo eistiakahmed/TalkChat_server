@@ -2,22 +2,24 @@ import { Worker } from 'bullmq';
 import { createNotificationWorker } from './notification.worker.js';
 import { createEmailWorker } from './email.worker.js';
 import { createMediaWorker } from './media.worker.js';
+import { createEphemeralWorker } from './ephemeral.worker.js';
 import { logger } from '../../utils/logger.js';
 
 let notificationWorker: Worker | null = null;
 let emailWorker: Worker | null = null;
 let mediaWorker: Worker | null = null;
+let ephemeralWorker: Worker | null = null;
 
 /**
  * Initialize all BullMQ background workers.
  * 
  * Spawns worker listeners for notification, transactional email,
- * and media processing queues.
+ * media processing, and ephemeral purge queues.
  * 
  * @see https://docs.bullmq.io/guide/workers
  */
 export const initWorkers = (): void => {
-  if (notificationWorker || emailWorker || mediaWorker) {
+  if (notificationWorker || emailWorker || mediaWorker || ephemeralWorker) {
     logger.warn('BullMQ workers are already running');
     return;
   }
@@ -26,6 +28,7 @@ export const initWorkers = (): void => {
     notificationWorker = createNotificationWorker();
     emailWorker = createEmailWorker();
     mediaWorker = createMediaWorker();
+    ephemeralWorker = createEphemeralWorker();
 
     logger.info('BullMQ background workers initialized successfully');
   } catch (error) {
@@ -59,6 +62,11 @@ export const stopWorkers = async (): Promise<void> => {
   if (mediaWorker) {
     closePromises.push(mediaWorker.close());
     mediaWorker = null;
+  }
+
+  if (ephemeralWorker) {
+    closePromises.push(ephemeralWorker.close());
+    ephemeralWorker = null;
   }
 
   await Promise.allSettled(closePromises);

@@ -8,7 +8,7 @@ model CallLog {
   startedAt      DateTime   @default(now())
   answeredAt     DateTime?
   endedAt        DateTime?
-  duration       Int?       // Call duration in seconds
+  duration       Int? // Call duration in seconds
   endReason      String?    @db.VarChar(50)
 
   createdAt DateTime @default(now())

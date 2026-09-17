@@ -50,6 +50,7 @@ export const QueueNames = {
   NOTIFICATION: 'talkchat-notification',
   EMAIL: 'talkchat-email',
   MEDIA: 'talkchat-media',
+  EPHEMERAL: 'talkchat-ephemeral',
 } as const;
 
 export type QueueName = (typeof QueueNames)[keyof typeof QueueNames];

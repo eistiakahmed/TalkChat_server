@@ -269,6 +269,28 @@ export class ChatController {
       next(error);
     }
   }
+
+  /**
+   * Update or disable the disappearing messages lifespan for a conversation.
+   * 
+   * @route POST /api/v1/chats/disappearing
+   * @body { conversationId: string, duration: number }
+   */
+  async updateDisappearingTimer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.userId!;
+      const result = await chatService.updateDisappearingTimer(userId, req.body);
+
+      sendResponse({
+        res,
+        statusCode: HttpStatus.OK,
+        message: t('chat.disappearing_updated', req.language),
+        data: { conversation: result },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const chatController = new ChatController();

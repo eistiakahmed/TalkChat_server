@@ -34,6 +34,9 @@ model User {
   callsMade     CallLog[] @relation("CallsMade")
   callsReceived CallLog[] @relation("CallsReceived")
 
+  stories    Story[]     @relation("UserStories")
+  storyViews StoryView[] @relation("UserStoryViews")
+
   @@index([username])
   @@index([email])
   @@index([isOnline])

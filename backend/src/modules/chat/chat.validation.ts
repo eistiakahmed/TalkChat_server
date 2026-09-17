@@ -236,6 +236,26 @@ export const markReadSchema = z.object({
   }),
 });
 
+/**
+ * Update Disappearing Messages Timer Validation Schema.
+ * 
+ * Configures the lifespan of future messages in seconds (e.g. 86400 = 24h, 0/null = disabled).
+ * 
+ * @see https://zod.dev/?id=numbers
+ */
+export const updateDisappearingTimerSchema = z.object({
+  body: z.object({
+    conversationId: z
+      .string({ required_error: 'Conversation ID is required' })
+      .uuid('Conversation ID must be a valid UUID format'),
+    duration: z
+      .number({ required_error: 'Duration in seconds is required' })
+      .int('Duration must be an integer')
+      .min(0, 'Duration cannot be negative')
+      .max(7776000, 'Duration cannot exceed 90 days (7,776,000 seconds)'),
+  }),
+});
+
 // TypeScript type definitions derived directly from schemas
 export type CreateDirectChatInput = z.infer<typeof createDirectChatSchema>['body'];
 export type CreateGroupChatInput = z.infer<typeof createGroupChatSchema>['body'];
@@ -248,3 +268,5 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>['body
 export type LeaveGroupInput = z.infer<typeof leaveGroupSchema>['body'];
 export type MuteChatInput = z.infer<typeof muteChatSchema>['body'];
 export type MarkReadInput = z.infer<typeof markReadSchema>['body'];
+export type UpdateDisappearingTimerInput = z.infer<typeof updateDisappearingTimerSchema>['body'];
+

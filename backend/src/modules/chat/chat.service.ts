@@ -1,5 +1,7 @@
-import { Prisma, ConversationType, MemberRole } from '@prisma/client';
+import { Prisma, ConversationType, MemberRole, MessageType } from '@prisma/client';
 import { prisma } from '../../config/database.config.js';
+import { getIO } from '../../socket/socket.server.js';
+import { SocketEvents } from '../../constants/socketEvents.js';
 import {
   BadRequestError,
   ForbiddenError,
@@ -17,6 +19,7 @@ import {
   RemoveMemberInput,
   UpdateMemberRoleInput,
   MuteChatInput,
+  UpdateDisappearingTimerInput,
 } from './chat.validation.js';
 
 /**
@@ -766,6 +769,113 @@ export class ChatService {
     });
 
     return updated;
+  }
+
+  /**
+   * Configure or toggle the disappearing messages timer for a conversation.
+   * 
+   * Updates conversation metadata, inserts a localized system log message,
+   * and broadcasts the change via WebSocket to all active room participants.
+   * 
+   * @param userId - Requesting user UUID
+   * @param input - Conversation ID and new duration in seconds (0 = disabled)
+   * @returns Updated conversation record
+   * 
+   * @see https://www.prisma.io/docs/concepts/components/prisma-client/transactions
+   */
+  async updateDisappearingTimer(userId: string, input: UpdateDisappearingTimerInput) {
+    const member = await prisma.conversationMember.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId: input.conversationId,
+          userId,
+        },
+      },
+      include: {
+        conversation: true,
+        user: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (!member || member.leftAt !== null) {
+      throw new ForbiddenError('You are not an active member of this conversation', 'chat.not_member');
+    }
+
+    // In group conversations, only ADMIN or MODERATOR roles can alter disappearing timers
+    if (
+      member.conversation.type === ConversationType.GROUP &&
+      member.role === MemberRole.MEMBER
+    ) {
+      throw new ForbiddenError(
+        'Only group admins or moderators can adjust disappearing message settings',
+        'chat.admin_required'
+      );
+    }
+
+    const duration = input.duration === 0 ? null : input.duration;
+
+    const [updatedConversation, systemMessage] = await prisma.$transaction(async (tx) => {
+      const conv = await tx.conversation.update({
+        where: { id: input.conversationId },
+        data: { disappearingDuration: duration },
+      });
+
+      // Format human-readable status text
+      let timerText = 'turned off disappearing messages';
+      if (duration === 86400) {
+        timerText = 'set disappearing messages to 24 hours';
+      } else if (duration === 604800) {
+        timerText = 'set disappearing messages to 7 days';
+      } else if (duration === 7776000) {
+        timerText = 'set disappearing messages to 90 days';
+      } else if (duration !== null) {
+        timerText = `set disappearing messages to ${duration} seconds`;
+      }
+
+      const sysMsg = await tx.message.create({
+        data: {
+          conversationId: input.conversationId,
+          senderId: userId,
+          type: MessageType.SYSTEM,
+          content: `${member.user.fullName} ${timerText}`,
+        },
+      });
+
+      await tx.conversation.update({
+        where: { id: input.conversationId },
+        data: {
+          lastMessageId: sysMsg.id,
+          lastMessageAt: sysMsg.createdAt,
+        },
+      });
+
+      return [conv, sysMsg];
+    });
+
+    // Real-time broadcast to conversation participants
+    try {
+      const io = getIO();
+      io.to(`conversation:${input.conversationId}`).emit(
+        SocketEvents.CONVERSATION_DISAPPEARING_UPDATED,
+        {
+          conversationId: input.conversationId,
+          disappearingDuration: duration,
+          systemMessage,
+          updatedBy: {
+            id: userId,
+            fullName: member.user.fullName,
+          },
+        }
+      );
+    } catch {
+      // Ignore if socket server is unavailable
+    }
+
+    return updatedConversation;
   }
 }
 

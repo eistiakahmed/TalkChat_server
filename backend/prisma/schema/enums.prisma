@@ -52,3 +52,14 @@ enum CallStatus {
   ENDED
 }
 
+enum StoryMediaType {
+  IMAGE
+  VIDEO
+  TEXT
+}
+
+enum StoryPrivacy {
+  ALL_CONTACTS
+  CLOSE_FRIENDS
+  SELECTED
+}

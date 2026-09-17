@@ -8,6 +8,7 @@ model Message {
   isEdited          Boolean     @default(false)
   isDeleted         Boolean     @default(false)
   deletedForUserIds String[]    @default([])
+  expiresAt         DateTime? // Automated disappearing messages expiration timestamp
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -23,6 +24,7 @@ model Message {
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([senderId])
   @@index([parentMessageId])
+  @@index([expiresAt])
   @@map("messages")
 }
 

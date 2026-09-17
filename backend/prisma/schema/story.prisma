@@ -1,0 +1,37 @@
+model Story {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  mediaUrl       String         @db.Text
+  mediaPublicId  String?        @db.VarChar(255)
+  mediaType      StoryMediaType @default(IMAGE)
+  caption        String?        @db.VarChar(500)
+  privacy        StoryPrivacy   @default(ALL_CONTACTS)
+  allowedUserIds String[]       @default([])
+  expiresAt      DateTime
+  createdAt      DateTime       @default(now())
+
+  // Relationships
+  user  User        @relation("UserStories", fields: [userId], references: [id], onDelete: Cascade)
+  views StoryView[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([createdAt(sort: Desc)])
+  @@map("stories")
+}
+
+model StoryView {
+  id       String   @id @default(uuid()) @db.Uuid
+  storyId  String   @db.Uuid
+  viewerId String   @db.Uuid
+  viewedAt DateTime @default(now())
+
+  // Relationships
+  story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer User  @relation("UserStoryViews", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, viewerId])
+  @@index([storyId])
+  @@index([viewerId])
+  @@map("story_views")
+}

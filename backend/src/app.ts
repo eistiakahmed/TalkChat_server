@@ -12,6 +12,7 @@ import chatRouter from './modules/chat/chat.routes.js';
 import messageRouter from './modules/message/message.routes.js';
 import e2eeRouter from './modules/e2ee/e2ee.routes.js';
 import callRouter from './modules/call/call.routes.js';
+import storyRouter from './modules/story/story.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -69,6 +70,10 @@ export const createApp = (): Express => {
   // WebRTC 1-to-1 Audio & Video Call Management Routes
   // @see https://webrtc.org/
   app.use(`${env.API_PREFIX}/calls`, callRouter);
+
+  // Ephemeral Stories & Statuses Routes
+  // @see https://expressjs.com/en/guide/routing.html
+  app.use(`${env.API_PREFIX}/stories`, storyRouter);
 
   // 404 Handler for undefined routes
   app.use((_req: Request, _res: Response, next) => {

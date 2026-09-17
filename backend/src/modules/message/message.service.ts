@@ -18,6 +18,7 @@ import { getIO } from '../../socket/socket.server.js';
 import { SocketEvents } from '../../constants/socketEvents.js';
 import { dispatchNotification } from '../../queues/producer/notification.queue.js';
 import { dispatchMediaJob } from '../../queues/producer/media.queue.js';
+import { scheduleDisappearingMessagePurge } from '../../queues/producer/ephemeral.queue.js';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -67,6 +68,13 @@ export class MessageService {
         conversationId_userId: {
           conversationId: input.conversationId,
           userId: senderId,
+        },
+      },
+      include: {
+        conversation: {
+          select: {
+            disappearingDuration: true,
+          },
         },
       },
     });
@@ -134,6 +142,13 @@ export class MessageService {
       else determinedType = MessageType.FILE;
     }
 
+    // Calculate disappearing messages lifespan if enabled on conversation
+    const disappearingDuration = membership.conversation?.disappearingDuration;
+    const expiresAt =
+      disappearingDuration && disappearingDuration > 0
+        ? new Date(Date.now() + disappearingDuration * 1000)
+        : null;
+
     // Execute atomic transaction for message persistence, conversation update, and unread counters
     const createdMessage = await prisma.$transaction(async (tx) => {
       const message = await tx.message.create({
@@ -143,6 +158,7 @@ export class MessageService {
           parentMessageId: input.parentMessageId,
           type: determinedType,
           content: input.content,
+          expiresAt,
           attachments: uploadedAttachment
             ? {
                 create: {
@@ -209,6 +225,17 @@ export class MessageService {
 
     // Broadcast real-time message event to conversation room
     emitToConversation(input.conversationId, SocketEvents.MESSAGE_NEW, { message: createdMessage });
+
+    // If message has an expiration timestamp, schedule delayed background purge
+    if (expiresAt && disappearingDuration) {
+      scheduleDisappearingMessagePurge(
+        createdMessage.id,
+        input.conversationId,
+        disappearingDuration * 1000
+      ).catch((err) => {
+        logger.warn({ err, messageId: createdMessage.id }, 'Failed to schedule disappearing message purge');
+      });
+    }
 
     // Asynchronously dispatch push notifications to other conversation participants
     prisma.conversationMember
@@ -313,13 +340,17 @@ export class MessageService {
       }
     }
 
-    // Query messages excluding those deleted for this specific user
+    // Query messages excluding those deleted for this specific user or expired via disappearing timer
     const messages = await prisma.message.findMany({
       where: {
         conversationId: input.conversationId,
         NOT: {
           deletedForUserIds: { has: userId },
         },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
         ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
       },
       take: limit + 1, // Query limit + 1 to detect whether more items remain

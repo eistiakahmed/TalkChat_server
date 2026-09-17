@@ -48,6 +48,13 @@ export const SocketEvents = {
   CALL_BUSY: 'call:busy',
   CALL_MISSED: 'call:missed',
 
+  // Ephemeral Stories & Disappearing Messages
+  STORY_NEW: 'story:new',
+  STORY_VIEWED: 'story:viewed',
+  STORY_DELETED: 'story:deleted',
+  CONVERSATION_DISAPPEARING_UPDATED: 'conversation:disappearing-updated',
+  MESSAGE_DISAPPEARED: 'message:disappeared',
+
   // Error Handling
   ERROR: 'error',
 } as const;

@@ -40,3 +40,16 @@ export interface MediaJobData {
   mimeType: string;
   action: MediaJobAction;
 }
+
+/**
+ * Payload definition for Ephemeral media and message cleanup tasks.
+ * @see https://docs.bullmq.io/guide/jobs
+ */
+export type EphemeralJobType = 'PURGE_EXPIRED_STORIES' | 'PURGE_EXPIRED_MESSAGES' | 'PURGE_SINGLE_MESSAGE';
+
+export interface EphemeralPurgeJobData {
+  type: EphemeralJobType;
+  messageId?: string;
+  conversationId?: string;
+}
+

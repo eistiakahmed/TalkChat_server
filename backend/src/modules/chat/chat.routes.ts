@@ -15,6 +15,7 @@ import {
   leaveGroupSchema,
   muteChatSchema,
   markReadSchema,
+  updateDisappearingTimerSchema,
 } from './chat.validation.js';
 
 /**
@@ -99,6 +100,11 @@ router.patch('/mute', validate(muteChatSchema), (req, res, next) =>
 
 router.patch('/read', validate(markReadSchema), (req, res, next) =>
   chatController.markAsRead(req, res, next)
+);
+
+// Disappearing message lifespan configuration
+router.post('/disappearing', validate(updateDisappearingTimerSchema), (req, res, next) =>
+  chatController.updateDisappearingTimer(req, res, next)
 );
 
 export default router;
