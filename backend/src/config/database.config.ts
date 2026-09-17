@@ -37,14 +37,14 @@ if (env.NODE_ENV === 'development') {
 export const connectDatabase = async (): Promise<void> => {
   try {
     await prisma.$connect();
-    logger.info('🐘 PostgreSQL Database connected successfully via Prisma');
+    logger.info('PostgreSQL Database connected successfully via Prisma');
   } catch (error) {
-    logger.error({ error }, '❌ Database connection failed');
+    logger.error({ error }, 'Database connection failed');
     process.exit(1);
   }
 };
 
 export const disconnectDatabase = async (): Promise<void> => {
   await prisma.$disconnect();
-  logger.info('🐘 PostgreSQL Database disconnected');
+  logger.info('PostgreSQL Database disconnected');
 };
