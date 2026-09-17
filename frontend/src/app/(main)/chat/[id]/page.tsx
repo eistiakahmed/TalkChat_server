@@ -8,6 +8,7 @@ import { messageService } from '../../../../services/message.service';
 import { useAuthStore } from '../../../../stores/auth.store';
 import { useChatStore } from '../../../../stores/chat.store';
 import { useChatSocket } from '../../../../hooks/useChatSocket';
+import { useWebRTC } from '../../../../hooks/useWebRTC';
 import type { ConversationMember } from '../../../../types/chat.types';
 import type { Message, MessageType } from '../../../../types/message.types';
 import { Avatar, Button, Spinner, Dropdown } from '../../../../components/ui';
@@ -40,6 +41,9 @@ export default function ActiveChatPage() {
 
   // Bind real-time WebSocket events for this conversation
   useChatSocket(conversationId);
+
+  // WebRTC calling triggers
+  const { startCall } = useWebRTC();
 
   const [replyingTo, setReplyingTo] = React.useState<Message | null>(null);
 
@@ -249,7 +253,13 @@ export default function ActiveChatPage() {
             variant="ghost"
             size="icon"
             aria-label="Start Voice Call"
-            className="text-muted-foreground hover:text-brand-600"
+            disabled={isGroup || !otherMember?.user}
+            onClick={() => {
+              if (otherMember?.user) {
+                startCall(otherMember.user, 'AUDIO', conversationId);
+              }
+            }}
+            className="text-muted-foreground hover:text-brand-600 disabled:opacity-40"
           >
             <Phone className="w-4 h-4" />
           </Button>
@@ -258,7 +268,13 @@ export default function ActiveChatPage() {
             variant="ghost"
             size="icon"
             aria-label="Start Video Call"
-            className="text-muted-foreground hover:text-brand-600"
+            disabled={isGroup || !otherMember?.user}
+            onClick={() => {
+              if (otherMember?.user) {
+                startCall(otherMember.user, 'VIDEO', conversationId);
+              }
+            }}
+            className="text-muted-foreground hover:text-brand-600 disabled:opacity-40"
           >
             <Video className="w-4 h-4" />
           </Button>
