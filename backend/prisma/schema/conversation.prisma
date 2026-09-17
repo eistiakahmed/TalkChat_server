@@ -1,12 +1,13 @@
 model Conversation {
-  id            String           @id @default(uuid()) @db.Uuid
-  type          ConversationType @default(DIRECT)
-  title         String?          @db.VarChar(100)
-  avatarUrl     String?          @db.Text
-  description   String?          @db.VarChar(255)
-  creatorId     String?          @db.Uuid
-  lastMessageId String?          @db.Uuid
-  lastMessageAt DateTime?
+  id             String           @id @default(uuid()) @db.Uuid
+  type           ConversationType @default(DIRECT)
+  title          String?          @db.VarChar(100)
+  avatarUrl      String?          @db.Text
+  avatarPublicId String?          @db.VarChar(255)
+  description    String?          @db.VarChar(255)
+  creatorId      String?          @db.Uuid
+  lastMessageId  String?          @db.Uuid
+  lastMessageAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

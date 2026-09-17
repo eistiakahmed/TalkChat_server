@@ -5,6 +5,7 @@ model User {
   passwordHash    String    @db.VarChar(255)
   fullName        String    @db.VarChar(100)
   avatarUrl       String?   @db.Text
+  avatarPublicId  String?   @db.VarChar(255)
   bio             String?   @db.VarChar(255)
   isEmailVerified Boolean   @default(false)
   isOnline        Boolean   @default(false)
