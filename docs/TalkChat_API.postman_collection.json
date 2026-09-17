@@ -25,6 +25,11 @@
       "key": "contactUserId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "conversationId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -540,6 +545,404 @@
               "raw": "{{baseUrl}}/api/v1/users/block/{{contactUserId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", "block", "{{contactUserId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Chats & Conversations (Phase 5)",
+      "item": [
+        {
+          "name": "Create or Get Direct Chat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.conversation) {",
+                  "    pm.collectionVariables.set(\"conversationId\", jsonData.data.conversation.id);",
+                  "    console.log(\"Saved conversationId:\", jsonData.data.conversation.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participantId\": \"{{contactUserId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/direct",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "direct"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Group Chat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.conversation) {",
+                  "    pm.collectionVariables.set(\"conversationId\", jsonData.data.conversation.id);",
+                  "    console.log(\"Saved group conversationId:\", jsonData.data.conversation.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Engineering Team\",\n  \"description\": \"Backend architecture and real-time messaging\",\n  \"memberIds\": [\"{{contactUserId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/group",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "group"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List User Conversations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversation Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/details",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "details"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Group Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"title\": \"TalkChat Core Developers\",\n  \"description\": \"Staff-level distributed systems discussion\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/update-group",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "update-group"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Members to Group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"memberIds\": [\"{{contactUserId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/add-members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "add-members"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"targetUserId\": \"{{contactUserId}}\",\n  \"role\": \"MODERATOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/update-role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "update-role"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Mute Conversation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"isMuted\": true,\n  \"mutedUntil\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/mute",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "mute"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Conversation as Read",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "read"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Member from Group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"targetUserId\": \"{{contactUserId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/remove-member",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "remove-member"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Leave Group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chats/leave",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chats", "leave"]
             }
           },
           "response": []

@@ -37,5 +37,25 @@
     "request_already_pending": "A contact request with this user is already pending.",
     "request_not_found": "Contact request not found or already processed.",
     "not_in_blocked_list": "User was not found in your blocked list."
+  },
+  "chat": {
+    "direct_chat_created": "Direct conversation ready.",
+    "group_created": "Group conversation created successfully.",
+    "group_updated": "Group details updated successfully.",
+    "members_added": "Members added to the group successfully.",
+    "member_removed": "Member removed from the group.",
+    "role_updated": "Member role updated successfully.",
+    "left_group": "You have left the group successfully.",
+    "muted": "Conversation notifications muted.",
+    "unmuted": "Conversation notifications unmuted.",
+    "marked_read": "Conversation marked as read.",
+    "not_found": "Conversation not found.",
+    "not_member": "You are not a member of this conversation.",
+    "cannot_chat_self": "You cannot start a direct conversation with yourself.",
+    "user_blocked": "Cannot initiate or update chat because a user is blocked.",
+    "already_member": "User is already an active member of this conversation.",
+    "admin_required": "Administrator or Moderator privileges required to perform this action.",
+    "cannot_demote_creator": "The creator of the group cannot be demoted.",
+    "cannot_remove_creator": "The creator of the group cannot be removed."
   }
 }

@@ -8,6 +8,7 @@ import { NotFoundError } from './errors/AppError.js';
 import { HttpStatus } from './constants/httpStatusCodes.js';
 import authRouter from './modules/auth/auth.routes.js';
 import userRouter from './modules/user/user.routes.js';
+import chatRouter from './modules/chat/chat.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -49,6 +50,10 @@ export const createApp = (): Express => {
   // User & Profile Management Routes
   // @see https://expressjs.com/en/guide/routing.html
   app.use(`${env.API_PREFIX}/users`, userRouter);
+
+  // Chat & Conversation Management Routes
+  // @see https://expressjs.com/en/guide/routing.html
+  app.use(`${env.API_PREFIX}/chats`, chatRouter);
 
   // 404 Handler for undefined routes
   app.use((_req: Request, _res: Response, next) => {
