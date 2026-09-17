@@ -8,6 +8,7 @@ import { MobileNav } from '../../components/layout/MobileNav';
 import { ConversationSidebar } from '../../components/chat/ConversationSidebar';
 import { Spinner } from '../../components/ui';
 import { usePresence } from '../../hooks/usePresence';
+import { CallOverlay } from '../../components/call/CallOverlay';
 
 /**
  * Authenticated Application Shell Layout.
@@ -81,6 +82,9 @@ export default function MainAppLayout({
 
       {/* 4. Mobile Fluid Bottom Navigation (Hidden when inside an active chat thread) */}
       {!isChatThreadOpen && <MobileNav />}
+
+      {/* 5. WebRTC Audio & Video Call Overlay */}
+      <CallOverlay />
     </div>
   );
 }
