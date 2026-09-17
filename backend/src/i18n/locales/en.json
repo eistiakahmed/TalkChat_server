@@ -23,5 +23,19 @@
     "username_exists": "An account with this username already exists.",
     "token_expired": "Your session token has expired. Please refresh or login again.",
     "token_invalid": "Invalid authentication token."
+  },
+  "user": {
+    "profile_updated": "Profile updated successfully.",
+    "contact_request_sent": "Contact request sent successfully.",
+    "contact_request_accepted": "Contact request accepted.",
+    "user_blocked": "User has been blocked.",
+    "user_unblocked": "User has been unblocked.",
+    "cannot_contact_self": "You cannot send a contact request to yourself.",
+    "cannot_block_self": "You cannot block yourself.",
+    "user_is_blocked": "Unable to interact with this user as they are blocked.",
+    "already_contact": "This user is already in your contacts.",
+    "request_already_pending": "A contact request with this user is already pending.",
+    "request_not_found": "Contact request not found or already processed.",
+    "not_in_blocked_list": "User was not found in your blocked list."
   }
 }
