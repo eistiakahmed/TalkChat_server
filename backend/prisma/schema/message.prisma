@@ -1,0 +1,77 @@
+model Message {
+  id                String      @id @default(uuid()) @db.Uuid
+  conversationId    String      @db.Uuid
+  senderId          String      @db.Uuid
+  parentMessageId   String?     @db.Uuid
+  type              MessageType @default(TEXT)
+  content           String?     @db.Text
+  isEdited          Boolean     @default(false)
+  isDeleted         Boolean     @default(false)
+  deletedForUserIds String[]    @default([])
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  conversation  Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender        User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  parentMessage Message?     @relation("MessageReplies", fields: [parentMessageId], references: [id], onDelete: SetNull)
+  replies       Message[]    @relation("MessageReplies")
+
+  receipts    MessageReceipt[]
+  reactions   MessageReaction[]
+  attachments Attachment[]
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
+  @@index([parentMessageId])
+  @@map("messages")
+}
+
+model MessageReceipt {
+  id          String         @id @default(uuid()) @db.Uuid
+  messageId   String         @db.Uuid
+  userId      String         @db.Uuid
+  status      DeliveryStatus @default(SENT)
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@index([status])
+  @@map("message_receipts")
+}
+
+model Attachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  messageId    String   @db.Uuid
+  fileUrl      String   @db.Text
+  fileName     String   @db.VarChar(255)
+  fileSize     Int // size in bytes
+  mimeType     String   @db.VarChar(100)
+  thumbnailUrl String?  @db.Text
+  duration     Int? // Audio/Video duration in seconds
+  createdAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String   @db.VarChar(10)
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("message_reactions")
+}

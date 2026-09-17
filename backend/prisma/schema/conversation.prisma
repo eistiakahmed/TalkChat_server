@@ -1,0 +1,44 @@
+model Conversation {
+  id            String           @id @default(uuid()) @db.Uuid
+  type          ConversationType @default(DIRECT)
+  title         String?          @db.VarChar(100)
+  avatarUrl     String?          @db.Text
+  description   String?          @db.VarChar(255)
+  creatorId     String?          @db.Uuid
+  lastMessageId String?          @db.Uuid
+  lastMessageAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  creator  User?                @relation("CreatedConversations", fields: [creatorId], references: [id], onDelete: SetNull)
+  members  ConversationMember[]
+  messages Message[]
+
+  @@index([type])
+  @@index([lastMessageAt(sort: Desc)])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id                String     @id @default(uuid()) @db.Uuid
+  conversationId    String     @db.Uuid
+  userId            String     @db.Uuid
+  role              MemberRole @default(MEMBER)
+  nickname          String?    @db.VarChar(100)
+  unreadCount       Int        @default(0)
+  isMuted           Boolean    @default(false)
+  mutedUntil        DateTime?
+  lastReadMessageId String?    @db.Uuid
+  joinedAt          DateTime   @default(now())
+  leftAt            DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@map("conversation_members")
+}

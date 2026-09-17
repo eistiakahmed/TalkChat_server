@@ -1,0 +1,38 @@
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum MemberRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+  LOCATION
+  SYSTEM
+}
+
+enum DeliveryStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum ContactStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum DeviceType {
+  ANDROID
+  IOS
+  WEB
+}

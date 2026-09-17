@@ -6,7 +6,15 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "rimraf dist && tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:format": "prisma format",
+    "prisma:validate": "prisma validate"
+  },
+  "prisma": {
+    "schema": "prisma/schema"
   },
   "keywords": [
     "messenger",
@@ -21,6 +29,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -33,6 +42,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.9",
     "pino-pretty": "^13.0.0",
+    "prisma": "^6.4.1",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
