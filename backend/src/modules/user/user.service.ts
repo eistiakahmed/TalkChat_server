@@ -82,7 +82,9 @@ export class UserService {
    * @param query - Search term, page, limit
    */
   async searchUsers(currentUserId: string, query: SearchUserQuery) {
-    const { q, page, limit } = query;
+    const { q } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
     // Retrieve blocked user IDs to filter out of results
