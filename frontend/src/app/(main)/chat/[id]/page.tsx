@@ -14,12 +14,16 @@ import type { Message, MessageType } from '../../../../types/message.types';
 import { Avatar, Button, Spinner, Dropdown } from '../../../../components/ui';
 import { MessageList } from '../../../../components/chat/MessageList';
 import { MessageInput } from '../../../../components/chat/MessageInput';
+import { DisappearingMessagesModal } from '../../../../components/chat/DisappearingMessagesModal';
+import { SafetyNumberModal } from '../../../../components/chat/SafetyNumberModal';
+import { ConversationInfoModal } from '../../../../components/chat/ConversationInfoModal';
 import {
   ArrowLeft,
   Phone,
   Video,
   MoreVertical,
   Clock,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { soundUtil } from '../../../../utils/sound.util';
@@ -46,6 +50,9 @@ export default function ActiveChatPage() {
   const { startCall } = useWebRTC();
 
   const [replyingTo, setReplyingTo] = React.useState<Message | null>(null);
+  const [isInfoOpen, setIsInfoOpen] = React.useState(false);
+  const [isDisappearingOpen, setIsDisappearingOpen] = React.useState(false);
+  const [isSafetyNumberOpen, setIsSafetyNumberOpen] = React.useState(false);
 
   // 1. Fetch conversation details
   const {
@@ -199,18 +206,32 @@ export default function ActiveChatPage() {
     {
       id: 'details',
       label: isGroup ? 'Group Information' : 'Contact Details',
-      onClick: () => {},
+      onClick: () => setIsInfoOpen(true),
     },
     {
       id: 'disappearing',
       label: 'Disappearing Messages',
       icon: <Clock className="w-4 h-4" />,
-      onClick: () => {},
+      onClick: () => setIsDisappearingOpen(true),
     },
+    ...(!isGroup && otherMember?.user
+      ? [
+          {
+            id: 'safetyNumber',
+            label: 'Verify Safety Number',
+            icon: <ShieldCheck className="w-4 h-4" />,
+            onClick: () => setIsSafetyNumberOpen(true),
+          },
+        ]
+      : []),
     {
       id: 'mute',
       label: conversation.userSettings?.isMuted ? 'Unmute' : 'Mute Notifications',
-      onClick: () => {},
+      onClick: async () => {
+        const nextMuted = !conversation.userSettings?.isMuted;
+        await chatService.toggleMute(conversationId, nextMuted);
+        queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      },
     },
   ];
 
@@ -218,11 +239,17 @@ export default function ActiveChatPage() {
     <div className="flex-1 h-full flex flex-col bg-background overflow-hidden select-none">
       {/* 1. Header */}
       <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-4 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
+        <div
+          onClick={() => setIsInfoOpen(true)}
+          className="flex items-center gap-3 min-w-0 cursor-pointer hover:opacity-85 transition-opacity"
+        >
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push('/chat')}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push('/chat');
+            }}
             className="md:hidden -ml-2"
             aria-label="Back to conversations"
           >
@@ -321,6 +348,30 @@ export default function ActiveChatPage() {
           });
         }}
       />
+
+      {/* 4. Modals */}
+      <ConversationInfoModal
+        isOpen={isInfoOpen}
+        onClose={() => setIsInfoOpen(false)}
+        conversation={conversation}
+        onOpenSafetyNumber={() => setIsSafetyNumberOpen(true)}
+        onOpenDisappearing={() => setIsDisappearingOpen(true)}
+      />
+
+      <DisappearingMessagesModal
+        isOpen={isDisappearingOpen}
+        onClose={() => setIsDisappearingOpen(false)}
+        conversationId={conversationId}
+        currentDuration={conversation.disappearingDuration}
+      />
+
+      {otherMember?.user && (
+        <SafetyNumberModal
+          isOpen={isSafetyNumberOpen}
+          onClose={() => setIsSafetyNumberOpen(false)}
+          targetUser={otherMember.user}
+        />
+      )}
     </div>
   );
 }
