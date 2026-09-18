@@ -10,6 +10,7 @@ import { Spinner } from '../ui';
 import { Shield } from 'lucide-react';
 
 const EMPTY_TYPING_USERS: TypingUser[] = [];
+const selectCurrentUserId = (s: { user: { id: string } | null }) => s.user?.id;
 
 export interface MessageListProps {
   conversationId: string;
@@ -52,8 +53,12 @@ export function MessageList({
   onReact,
   onDelete,
 }: MessageListProps) {
-  const currentUserId = useAuthStore((s) => s.user?.id);
-  const rawTyping = useSocketStore((s) => s.typingUsers[conversationId]);
+  const currentUserId = useAuthStore(selectCurrentUserId);
+  const typingSelector = React.useCallback(
+    (s: { typingUsers: Record<string, TypingUser[]> }) => s.typingUsers[conversationId],
+    [conversationId]
+  );
+  const rawTyping = useSocketStore(typingSelector);
   const typingUsers = rawTyping || EMPTY_TYPING_USERS;
 
   const containerRef = React.useRef<HTMLDivElement>(null);

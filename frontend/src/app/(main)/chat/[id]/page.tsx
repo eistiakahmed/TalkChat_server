@@ -29,6 +29,8 @@ import {
 import { soundUtil } from '../../../../utils/sound.util';
 
 const EMPTY_MESSAGES: Message[] = [];
+const selectCurrentUserId = (s: { user: { id: string } | null }) => s.user?.id;
+const selectSetActiveConversation = (s: { setActiveConversation: (conv: any) => void }) => s.setActiveConversation;
 
 /**
  * Active Conversation Thread Page.
@@ -42,8 +44,8 @@ export default function ActiveChatPage() {
   const conversationId = params?.id as string;
   const queryClient = useQueryClient();
 
-  const currentUserId = useAuthStore((s) => s.user?.id);
-  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const currentUserId = useAuthStore(selectCurrentUserId);
+  const setActiveConversation = useChatStore(selectSetActiveConversation);
 
   // Bind real-time WebSocket events for this conversation
   useChatSocket(conversationId);
@@ -79,7 +81,7 @@ export default function ActiveChatPage() {
         limit: 50,
       });
       // Backend returns newest first; reverse for chronological stream (oldest to newest)
-      return res.messages.reverse();
+      return [...res.messages].reverse();
     },
     enabled: !!conversationId,
   });
