@@ -277,13 +277,11 @@ export class ChatService {
       ...(input.type ? { type: input.type } : {}),
     };
 
-    const [total, conversations] = await Promise.all([
-      prisma.conversation.count({ where }),
-      prisma.conversation.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: [
+    const conversations = await prisma.conversation.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: [
           { lastMessageAt: 'desc' },
           { updatedAt: 'desc' },
         ],
@@ -315,9 +313,8 @@ export class ChatService {
               senderId: true,
             },
           },
-        },
-      }),
-    ]);
+      },
+    });
 
     // Format output with member's personal settings (unreadCount, isMuted) and lastMessage
     const items = conversations.map((conv) => {
