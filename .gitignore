@@ -27,3 +27,8 @@ logs/
 .agents/
 docs/
 AGENTS.md
+# Mobile App (separate repo)
+app/
+
+# Web Client (separate repo)
+frontend/
