@@ -25,8 +25,8 @@ export const createApp = (): Express => {
       credentials: true,
     })
   );
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // i18n localization middleware
   app.use(i18nMiddleware);

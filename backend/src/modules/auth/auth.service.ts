@@ -6,6 +6,8 @@ import { ConflictError, UnauthorizedError, NotFoundError } from '../../errors/Ap
 import { RegisterInput, LoginInput } from './auth.validation.js';
 import { dispatchEmail } from '../../queues/producer/email.queue.js';
 import { logger } from '../../utils/logger.js';
+import { getIO } from '../../socket/socket.server.js';
+import { SocketEvents } from '../../constants/socketEvents.js';
 
 /**
  * Authentication Business Logic Service.
@@ -231,6 +233,26 @@ export class AuthService {
       // Blacklist access token for 15 minutes (its max lifespan)
       await redis.set(`blacklist:${accessTokenStr}`, 'revoked', 'EX', 15 * 60);
     }
+
+    // Immediately mark user as offline in database and presence cache
+    const lastSeen = new Date();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isOnline: false, lastSeen },
+    }).catch(() => {});
+
+    await redis.del(`user:sockets:${userId}`);
+    await redis.srem('online_users', userId);
+
+    try {
+      const io = getIO();
+      io.in(`user:${userId}`).disconnectSockets(true);
+      io.emit(SocketEvents.USER_OFFLINE, {
+        userId,
+        isOnline: false,
+        lastSeen: lastSeen.toISOString(),
+      });
+    } catch {}
   }
 
   /**

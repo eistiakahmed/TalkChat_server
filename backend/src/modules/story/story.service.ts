@@ -1,5 +1,5 @@
 import { prisma } from '../../config/database.config.js';
-import { cloudinary } from '../../config/cloudinary.config.js';
+import { cloudinary, uploadBufferToCloudinary } from '../../config/cloudinary.config.js';
 import { getIO } from '../../socket/socket.server.js';
 import { SocketEvents } from '../../constants/socketEvents.js';
 import {
@@ -14,7 +14,7 @@ import {
   GetStoryViewersInput,
   DeleteStoryInput,
 } from './story.validation.js';
-import { ContactStatus, StoryMediaType, StoryPrivacy } from '@prisma/client';
+import { ContactStatus, ConversationType, StoryMediaType, StoryPrivacy } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -37,11 +37,32 @@ export class StoryService {
   async createStory(userId: string, input: CreateStoryInput) {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    let finalMediaUrl = input.mediaUrl || '';
+    let finalPublicId = input.mediaPublicId || null;
+
+    const base64Data =
+      input.mediaBase64 ||
+      (input.mediaUrl?.startsWith('data:') ? input.mediaUrl : null);
+
+    if (base64Data) {
+      const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      const isVideo =
+        input.mediaType === 'VIDEO' || base64Data.startsWith('data:video');
+      const uploadRes = await uploadBufferToCloudinary(
+        buffer,
+        'talkchat/stories',
+        isVideo ? 'video' : 'image'
+      );
+      finalMediaUrl = uploadRes.secureUrl;
+      finalPublicId = uploadRes.publicId;
+    }
+
     const story = await prisma.story.create({
       data: {
         userId,
-        mediaUrl: input.mediaUrl,
-        mediaPublicId: input.mediaPublicId,
+        mediaUrl: finalMediaUrl,
+        mediaPublicId: finalPublicId,
         mediaType: input.mediaType as StoryMediaType,
         caption: input.caption,
         privacy: input.privacy as StoryPrivacy,
@@ -60,22 +81,48 @@ export class StoryService {
       },
     });
 
-    // Notify connected contacts via WebSocket
+    // Notify connected contacts and direct chat partners via WebSocket
     try {
       const io = getIO();
-      // Fetch accepted contacts to broadcast to their notification channels
+      // Fetch contacts
       const contacts = await prisma.contact.findMany({
         where: {
           OR: [
-            { userId, status: ContactStatus.ACCEPTED },
-            { contactId: userId, status: ContactStatus.ACCEPTED },
+            { userId },
+            { contactId: userId },
           ],
+          status: { in: [ContactStatus.ACCEPTED, ContactStatus.PENDING] },
         },
       });
 
       const contactUserIds = contacts.map((c) => (c.userId === userId ? c.contactId : c.userId));
 
-      for (const contactId of contactUserIds) {
+      // Fetch direct chat partners
+      const directConversations = await prisma.conversationMember.findMany({
+        where: {
+          userId,
+          conversation: { type: ConversationType.DIRECT },
+          leftAt: null,
+        },
+        select: {
+          conversation: {
+            select: {
+              members: {
+                where: { userId: { not: userId }, leftAt: null },
+                select: { userId: true },
+              },
+            },
+          },
+        },
+      });
+
+      const directUserIds = directConversations.flatMap((dc) =>
+        dc.conversation.members.map((m) => m.userId)
+      );
+
+      const targetUserIds = Array.from(new Set([...contactUserIds, ...directUserIds]));
+
+      for (const contactId of targetUserIds) {
         // Respect selective privacy settings
         if (
           input.privacy === StoryPrivacy.ALL_CONTACTS ||
@@ -126,13 +173,14 @@ export class StoryService {
       blockedUserIds.add(b.blockerId === userId ? b.blockedId : b.blockerId);
     });
 
-    // 2. Fetch accepted contacts
+    // 2. Fetch contacts (both ACCEPTED and PENDING)
     const contacts = await prisma.contact.findMany({
       where: {
         OR: [
-          { userId, status: ContactStatus.ACCEPTED },
-          { contactId: userId, status: ContactStatus.ACCEPTED },
+          { userId },
+          { contactId: userId },
         ],
+        status: { in: [ContactStatus.ACCEPTED, ContactStatus.PENDING] },
       },
     });
 
@@ -140,8 +188,31 @@ export class StoryService {
       .map((c) => (c.userId === userId ? c.contactId : c.userId))
       .filter((id) => !blockedUserIds.has(id));
 
-    // Include the user themselves to see their own active stories in the feed
-    const eligibleAuthorIds = [userId, ...contactIds];
+    // Also fetch direct chat partners
+    const directConversations = await prisma.conversationMember.findMany({
+      where: {
+        userId,
+        conversation: { type: ConversationType.DIRECT },
+        leftAt: null,
+      },
+      select: {
+        conversation: {
+          select: {
+            members: {
+              where: { userId: { not: userId }, leftAt: null },
+              select: { userId: true },
+            },
+          },
+        },
+      },
+    });
+
+    const directPartnerIds = directConversations
+      .flatMap((dc) => dc.conversation.members.map((m) => m.userId))
+      .filter((id) => !blockedUserIds.has(id));
+
+    // Include the user themselves to see their own active stories, their contacts, and direct partners
+    const eligibleAuthorIds = Array.from(new Set([userId, ...contactIds, ...directPartnerIds]));
 
     // 3. Query active stories
     const stories = await prisma.story.findMany({

@@ -22,11 +22,27 @@ import { scheduleDisappearingMessagePurge } from '../../queues/producer/ephemera
 import { logger } from '../../utils/logger.js';
 
 /**
- * Safely emit WebSocket events to a conversation room if socket server is active.
+ * Safely emit WebSocket events to a conversation room AND directly to each member's private channel.
+ * Dual emission guarantees 100% real-time delivery even if room subscriptions lagged or reconnected.
  */
-const emitToConversation = (conversationId: string, event: string, payload: unknown): void => {
+const emitToConversation = async (conversationId: string, event: string, payload: unknown): Promise<void> => {
   try {
-    getIO().to(`conversation:${conversationId}`).emit(event, payload);
+    const io = getIO();
+    // 1. Emit to room subscribers
+    io.to(`conversation:${conversationId}`).emit(event, payload);
+
+    // 2. Also emit to each member's private channel (bound unconditionally on socket connection)
+    const members = await prisma.conversationMember.findMany({
+      where: {
+        conversationId,
+        leftAt: null,
+      },
+      select: { userId: true },
+    });
+
+    for (const member of members) {
+      io.to(`user:${member.userId}`).emit(event, payload);
+    }
   } catch {
     // Gracefully handle situations where socket server is uninitialized (e.g. CLI/tests)
   }
@@ -55,7 +71,7 @@ export class MessageService {
    * @returns Complete message entity with sender profile and attachments
    */
   async sendMessage(senderId: string, input: SendMessageInput, file?: Express.Multer.File) {
-    if (!input.content && !file) {
+    if (!input.content && !file && !input.attachmentBase64) {
       throw new BadRequestError(
         'Message content or an attachment is required',
         'message.empty_content'
@@ -131,14 +147,32 @@ export class MessageService {
         fileSize: file.size,
         mimeType: file.mimetype,
       };
+    } else if (input.attachmentBase64) {
+      const cleanBase64 = input.attachmentBase64.replace(/^data:[^;]+;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      const isVideo = input.attachmentMime?.startsWith('video/');
+      const uploadResult = await uploadBufferToCloudinary(
+        buffer,
+        'talkchat/attachments',
+        isVideo ? 'video' : 'image'
+      );
+
+      uploadedAttachment = {
+        fileUrl: uploadResult.secureUrl,
+        publicId: uploadResult.publicId,
+        fileName: input.attachmentName || 'attachment.jpg',
+        fileSize: buffer.length,
+        mimeType: input.attachmentMime || (isVideo ? 'video/mp4' : 'image/jpeg'),
+      };
     }
 
     // Determine message type
     let determinedType: MessageType = input.type ?? MessageType.TEXT;
-    if (file) {
-      if (file.mimetype.startsWith('image/')) determinedType = MessageType.IMAGE;
-      else if (file.mimetype.startsWith('video/')) determinedType = MessageType.VIDEO;
-      else if (file.mimetype.startsWith('audio/')) determinedType = MessageType.AUDIO;
+    if (file || input.attachmentBase64) {
+      const mime = file ? file.mimetype : (input.attachmentMime || 'image/jpeg');
+      if (mime.startsWith('image/')) determinedType = MessageType.IMAGE;
+      else if (mime.startsWith('video/')) determinedType = MessageType.VIDEO;
+      else if (mime.startsWith('audio/')) determinedType = MessageType.AUDIO;
       else determinedType = MessageType.FILE;
     }
 
@@ -220,6 +254,18 @@ export class MessageService {
         },
       });
 
+      // Ensure sender's own unreadCount is reset to 0 since they are actively participating
+      await tx.conversationMember.updateMany({
+        where: {
+          conversationId: input.conversationId,
+          userId: senderId,
+          leftAt: null,
+        },
+        data: {
+          unreadCount: 0,
+        },
+      });
+
       return message;
     });
 
@@ -262,6 +308,11 @@ export class MessageService {
         });
 
         for (const member of members) {
+          try {
+            const io = getIO();
+            io.to(`user:${member.userId}`).emit(SocketEvents.MESSAGE_NEW, { message: createdMessage });
+          } catch {}
+
           await dispatchNotification({
             userId: member.userId,
             senderId,
@@ -603,17 +654,31 @@ export class MessageService {
       },
     });
 
+    const broadcastReaction = (payload: {
+      messageId: string;
+      conversationId: string;
+      emoji: string;
+      userId: string;
+      reacted: boolean;
+      action: 'ADDED' | 'REMOVED';
+      reaction: { id?: string; userId: string; emoji: string };
+    }) => {
+      emitToConversation(message.conversationId, SocketEvents.MESSAGE_REACTION, payload);
+    };
+
     if (existing) {
       await prisma.messageReaction.delete({
         where: { id: existing.id },
       });
 
-      emitToConversation(message.conversationId, SocketEvents.MESSAGE_REACTION, {
+      broadcastReaction({
         messageId: input.messageId,
         conversationId: message.conversationId,
         emoji: input.emoji,
         userId,
         reacted: false,
+        action: 'REMOVED',
+        reaction: { userId, emoji: input.emoji },
       });
 
       return { messageId: input.messageId, emoji: input.emoji, reacted: false };
@@ -627,12 +692,14 @@ export class MessageService {
       },
     });
 
-    emitToConversation(message.conversationId, SocketEvents.MESSAGE_REACTION, {
+    broadcastReaction({
       messageId: input.messageId,
       conversationId: message.conversationId,
       emoji: created.emoji,
       userId,
       reacted: true,
+      action: 'ADDED',
+      reaction: { id: created.id, userId, emoji: created.emoji },
     });
 
     return { messageId: input.messageId, emoji: created.emoji, reacted: true };

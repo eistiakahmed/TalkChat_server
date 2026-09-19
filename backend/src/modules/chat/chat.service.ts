@@ -1,4 +1,4 @@
-import { Prisma, ConversationType, MemberRole, MessageType } from '@prisma/client';
+import { Prisma, ConversationType, MemberRole, MessageType, ContactStatus } from '@prisma/client';
 import { prisma } from '../../config/database.config.js';
 import { getIO } from '../../socket/socket.server.js';
 import { SocketEvents } from '../../constants/socketEvents.js';
@@ -138,6 +138,34 @@ export class ChatService {
         },
       });
 
+      // Ensure mutual contact record exists so participants see each other's stories & contacts
+      try {
+        const existingContact = await prisma.contact.findFirst({
+          where: {
+            OR: [
+              { userId, contactId: participantId },
+              { userId: participantId, contactId: userId },
+            ],
+          },
+        });
+        if (!existingContact) {
+          await prisma.contact.create({
+            data: {
+              userId,
+              contactId: participantId,
+              status: ContactStatus.ACCEPTED,
+            },
+          });
+        } else if (existingContact.status !== ContactStatus.ACCEPTED) {
+          await prisma.contact.update({
+            where: { id: existingContact.id },
+            data: { status: ContactStatus.ACCEPTED },
+          });
+        }
+      } catch {
+        // Non-critical, ignore
+      }
+
       return conversation;
     });
   }
@@ -275,15 +303,40 @@ export class ChatService {
               },
             },
           },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              content: true,
+              type: true,
+              isDeleted: true,
+              createdAt: true,
+              senderId: true,
+            },
+          },
         },
       }),
     ]);
 
-    // Format output with member's personal settings (unreadCount, isMuted)
+    // Format output with member's personal settings (unreadCount, isMuted) and lastMessage
     const items = conversations.map((conv) => {
       const userMember = conv.members.find((m) => m.userId === userId);
+      const rawLast = (conv as any).messages && (conv as any).messages.length > 0 ? (conv as any).messages[0] : null;
+      const { messages: _m, ...restConv } = conv as any;
+
       return {
-        ...conv,
+        ...restConv,
+        lastMessage: rawLast
+          ? {
+              id: rawLast.id,
+              content: rawLast.content,
+              type: rawLast.type,
+              isDeleted: rawLast.isDeleted,
+              createdAt: rawLast.createdAt,
+              senderId: rawLast.senderId,
+            }
+          : null,
         userSettings: {
           unreadCount: userMember?.unreadCount ?? 0,
           isMuted: userMember?.isMuted ?? false,
@@ -293,13 +346,29 @@ export class ChatService {
       };
     });
 
+    // Deduplicate any accidental duplicate direct conversations with the same peer
+    const seenDirectPeers = new Set<string>();
+    const dedupedItems = items.filter((item) => {
+      if (item.type === ConversationType.DIRECT) {
+        const peer = item.members.find((m: any) => m.userId !== userId);
+        const peerId = peer?.userId;
+        if (peerId) {
+          if (seenDirectPeers.has(peerId)) {
+            return false;
+          }
+          seenDirectPeers.add(peerId);
+        }
+      }
+      return true;
+    });
+
     return {
-      items,
+      items: dedupedItems,
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: dedupedItems.length,
+        totalPages: Math.ceil(dedupedItems.length / limit),
       },
     };
   }
@@ -333,6 +402,18 @@ export class ChatService {
           },
           orderBy: { joinedAt: 'asc' },
         },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            content: true,
+            type: true,
+            isDeleted: true,
+            createdAt: true,
+            senderId: true,
+          },
+        },
       },
     });
 
@@ -345,7 +426,22 @@ export class ChatService {
       throw new ForbiddenError('You are not a member of this conversation', 'chat.not_member');
     }
 
-    return conversation;
+    const rawLast = (conversation as any).messages && (conversation as any).messages.length > 0 ? (conversation as any).messages[0] : null;
+    const { messages: _m, ...rest } = conversation as any;
+
+    return {
+      ...rest,
+      lastMessage: rawLast
+        ? {
+            id: rawLast.id,
+            content: rawLast.content,
+            type: rawLast.type,
+            isDeleted: rawLast.isDeleted,
+            createdAt: rawLast.createdAt,
+            senderId: rawLast.senderId,
+          }
+        : null,
+    };
   }
 
   /**

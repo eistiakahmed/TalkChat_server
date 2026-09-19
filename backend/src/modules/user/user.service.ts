@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database.config.js';
-import { uploadBufferToCloudinary, deleteFromCloudinary } from '../../config/cloudinary.config.js';
-import { NotFoundError, BadRequestError, ConflictError } from '../../errors/AppError.js';
+import { uploadBufferToCloudinary, deleteFromCloudinary, cloudinary } from '../../config/cloudinary.config.js';
+import { NotFoundError, BadRequestError } from '../../errors/AppError.js';
 import { UpdateProfileInput, SearchUserQuery } from './user.validation.js';
 import { ContactStatus } from '@prisma/client';
 
@@ -31,12 +31,11 @@ export class UserService {
       throw new NotFoundError('User not found', 'errors.not_found');
     }
 
-    let avatarUrl = user.avatarUrl;
+    let avatarUrl = (data as any).avatarUrl !== undefined ? (data as any).avatarUrl : user.avatarUrl;
     let avatarPublicId = user.avatarPublicId;
 
-    // Upload new avatar to Cloudinary if provided
+    // Upload new avatar to Cloudinary if provided as multipart file OR base64 data URI
     if (avatarFile) {
-      // Delete previous avatar from Cloudinary if it exists
       if (user.avatarPublicId) {
         await deleteFromCloudinary(user.avatarPublicId, 'image').catch(() => {});
       }
@@ -49,6 +48,23 @@ export class UserService {
 
       avatarUrl = uploadResult.secureUrl;
       avatarPublicId = uploadResult.publicId;
+    } else if ((data as any).avatarBase64) {
+      if (user.avatarPublicId) {
+        await deleteFromCloudinary(user.avatarPublicId, 'image').catch(() => {});
+      }
+
+      const rawBase64 = (data as any).avatarBase64;
+      const base64Payload = rawBase64.startsWith('data:')
+        ? rawBase64
+        : `data:image/jpeg;base64,${rawBase64}`;
+
+      const uploadResult = await cloudinary.uploader.upload(base64Payload, {
+        folder: 'talkchat/avatars',
+        resource_type: 'image',
+      });
+
+      avatarUrl = uploadResult.secure_url;
+      avatarPublicId = uploadResult.public_id;
     }
 
     const updatedUser = await prisma.user.update({
@@ -208,17 +224,31 @@ export class UserService {
     });
 
     if (existing) {
-      if (existing.status === ContactStatus.ACCEPTED) {
-        throw new ConflictError('User is already in your contacts', 'user.already_contact');
+      if (existing.status !== ContactStatus.ACCEPTED) {
+        const updated = await prisma.contact.update({
+          where: { id: existing.id },
+          data: { status: ContactStatus.ACCEPTED },
+          include: {
+            contact: {
+              select: {
+                id: true,
+                username: true,
+                fullName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        });
+        return updated;
       }
-      throw new ConflictError('Contact request already pending', 'user.request_already_pending');
+      return existing;
     }
 
     const contact = await prisma.contact.create({
       data: {
         userId,
         contactId,
-        status: ContactStatus.PENDING,
+        status: ContactStatus.ACCEPTED,
       },
       include: {
         contact: {

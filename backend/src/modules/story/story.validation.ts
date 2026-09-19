@@ -11,14 +11,20 @@ import { z } from 'zod';
  */
 
 export const createStorySchema = z.object({
-  body: z.object({
-    mediaUrl: z.string().url('Valid media URL is required'),
-    mediaPublicId: z.string().max(255).optional(),
-    mediaType: z.enum(['IMAGE', 'VIDEO', 'TEXT']).default('IMAGE'),
-    caption: z.string().max(500, 'Caption cannot exceed 500 characters').optional(),
-    privacy: z.enum(['ALL_CONTACTS', 'CLOSE_FRIENDS', 'SELECTED']).default('ALL_CONTACTS'),
-    allowedUserIds: z.array(z.string().uuid('Invalid user UUID')).optional().default([]),
-  }),
+  body: z
+    .object({
+      mediaUrl: z.string().optional(),
+      mediaBase64: z.string().optional(),
+      mediaPublicId: z.string().max(255).optional(),
+      mediaType: z.enum(['IMAGE', 'VIDEO', 'TEXT']).default('IMAGE'),
+      caption: z.string().max(500, 'Caption cannot exceed 500 characters').optional(),
+      privacy: z.enum(['ALL_CONTACTS', 'CLOSE_FRIENDS', 'SELECTED']).default('ALL_CONTACTS'),
+      allowedUserIds: z.array(z.string().uuid('Invalid user UUID')).optional().default([]),
+    })
+    .refine((data) => !!(data.mediaUrl || data.mediaBase64), {
+      message: 'Either mediaUrl or mediaBase64 must be provided',
+      path: ['mediaUrl'],
+    }),
 });
 
 export const getStoryFeedSchema = z.object({

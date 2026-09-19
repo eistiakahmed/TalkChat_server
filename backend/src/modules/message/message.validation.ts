@@ -25,6 +25,9 @@ export const sendMessageSchema = z.object({
       .string()
       .uuid('Parent message ID must be a valid UUID')
       .optional(),
+    attachmentBase64: z.string().optional(),
+    attachmentName: z.string().optional(),
+    attachmentMime: z.string().optional(),
   }),
 });
 

@@ -22,7 +22,7 @@ export const registerChatHandlers = (_io: Server, socket: Socket): void => {
    * Validates that the requesting socket belongs to an active participant
    * of the conversation before binding the socket to room `conversation:${conversationId}`.
    */
-  socket.on(SocketEvents.JOIN_ROOM, async (payload: { conversationId: string }) => {
+  const handleJoin = async (payload: { conversationId: string }) => {
     try {
       const { conversationId } = payload;
       if (!conversationId) return;
@@ -54,12 +54,9 @@ export const registerChatHandlers = (_io: Server, socket: Socket): void => {
       logger.error({ error, userId, payload }, 'Error joining conversation room');
       socket.emit(SocketEvents.ERROR, { message: 'Internal socket error joining room' });
     }
-  });
+  };
 
-  /**
-   * Handle leaving a conversation room.
-   */
-  socket.on(SocketEvents.LEAVE_ROOM, async (payload: { conversationId: string }) => {
+  const handleLeave = async (payload: { conversationId: string }) => {
     try {
       const { conversationId } = payload;
       if (!conversationId) return;
@@ -72,7 +69,12 @@ export const registerChatHandlers = (_io: Server, socket: Socket): void => {
     } catch (error) {
       logger.error({ error, userId, payload }, 'Error leaving conversation room');
     }
-  });
+  };
+
+  socket.on(SocketEvents.JOIN_ROOM, handleJoin);
+  socket.on('room:join', handleJoin);
+  socket.on(SocketEvents.LEAVE_ROOM, handleLeave);
+  socket.on('room:leave', handleLeave);
 
   /**
    * Handle typing indicator started.

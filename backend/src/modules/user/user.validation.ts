@@ -27,6 +27,13 @@ export const updateProfileSchema = z.object({
       .trim()
       .max(255, 'Bio cannot exceed 255 characters')
       .optional(),
+    avatarUrl: z
+      .string()
+      .trim()
+      .optional(),
+    avatarBase64: z
+      .string()
+      .optional(),
   }),
 });
 

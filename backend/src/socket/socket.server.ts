@@ -74,6 +74,19 @@ export const initSocketServer = (httpServer: HttpServer): Server => {
       logger.error({ err, userId }, 'Error executing handleUserConnect');
     });
 
+    // Handle client presence heartbeats
+    socket.on('presence:heartbeat', () => {
+      presenceTracker.handleHeartbeat(userId, socket.id);
+    });
+
+    // Handle client presence status updates
+    socket.on('presence:status', async (data: { status?: 'ONLINE' | 'AWAY' }) => {
+      if (data?.status === 'ONLINE') {
+        await presenceTracker.handleHeartbeat(userId, socket.id);
+        io.emit(SocketEvents.USER_ONLINE, { userId, isOnline: true });
+      }
+    });
+
     // Handle client disconnection
     socket.on(SocketEvents.DISCONNECT, async (reason) => {
       logger.info({ socketId: socket.id, userId, reason }, 'WebSocket client disconnected');
@@ -82,6 +95,12 @@ export const initSocketServer = (httpServer: HttpServer): Server => {
   });
 
   ioInstance = io;
+
+  // Reconcile presence state on server boot
+  presenceTracker.syncStartupPresence(io).catch((err) => {
+    logger.error({ err }, 'Error syncing startup presence');
+  });
+
   return io;
 };
 
